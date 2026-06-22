@@ -182,66 +182,32 @@
 <dialog id="settingsDialog" class="sheet tall-sheet">
   <form method="dialog">
     <div class="sheet-handle"></div><button class="close" value="cancel">×</button>
-    <span class="eyebrow">AI & DATA SETTINGS</span><h2>API 연결 설정</h2>
+    <span class="eyebrow">AI & DATA SETTINGS</span><h2>API 키 설정</h2>
     <div class="setting-group">
-      <strong>AI API</strong>
-      <label class="field">연결 방식
-        <select id="aiConnectionMode">
-          <option value="direct">API 키로 직접 연결</option>
-          <option value="proxy">내 서버 프록시로 연결</option>
-        </select>
-      </label>
-      <div id="aiDirectSettings">
-        <label class="field">AI API 키<input id="aiApiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
-        <label class="field">AI API 주소<input id="aiApiUrl" placeholder="https://api.openai.com/v1/chat/completions"></label>
-        <label class="field">AI 모델<input id="aiModel" placeholder="사용할 멀티모달 모델명"></label>
-      </div>
-      <div id="aiProxySettings">
-        <label class="field">내 OpenAI API 키<input id="proxyAiApiKey" type="password" autocomplete="off" placeholder="sk-... (이 스마트폰에만 저장)"></label>
-        <label class="field">프록시 주소<input id="apiEndpoint" placeholder="https://내서버.com/api/analyze"></label>
-        <label class="field">앱 접근코드 (선택)<input id="appAccessCode" type="password" autocomplete="off" placeholder="운영자 공용 키를 사용할 때만 입력"></label>
-      </div>
-    </div>
-    <div class="setting-group">
-      <strong>날씨 프록시</strong>
+      <strong>사용할 API 키</strong>
+      <label class="field">내 OpenAI API 키<input id="proxyAiApiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
       <label class="field">내 공공데이터포털 API 키<input id="weatherApiKey" type="password" autocomplete="off" placeholder="발급받은 일반 인증키"></label>
-      <label class="field">날씨 프록시 주소<input id="weatherEndpoint" placeholder="http://127.0.0.1:4173/api/weather"></label>
-      <label class="field">날씨 지역
-        <select id="weatherRegion">
-          <option value="서울|60|127">서울</option>
-          <option value="부산|98|76">부산</option>
-          <option value="대구|89|90">대구</option>
-          <option value="인천|55|124">인천</option>
-          <option value="광주|58|74">광주</option>
-          <option value="대전|67|100">대전</option>
-          <option value="울산|102|84">울산</option>
-          <option value="세종|66|103">세종</option>
-          <option value="수원|60|121">수원</option>
-          <option value="제주|52|38">제주</option>
-          <option value="current">현재 위치</option>
-        </select>
-      </label>
-      <button type="button" class="secondary location-btn" id="useCurrentLocation">⌖ 현재 위치 사용</button>
-      <small class="setting-caption">공공데이터 API 키와 원본 주소는 `.env`에만 저장됩니다. 격자 좌표는 앱이 자동 처리합니다.</small>
+      <small class="setting-caption">두 키는 이 스마트폰에만 저장됩니다. 연결 주소와 모델은 앱이 자동으로 설정합니다.</small>
     </div>
-    <label class="field prompt-field">사용자 맞춤 AI 분석 프롬프트
-      <textarea id="customPrompt"></textarea>
-      <small>사용자의 건강 목표나 선호 방식에 맞게 자유롭게 고칠 수 있습니다.</small>
-    </label>
-    <label class="field prompt-field">업로드 자료 건강정보 추출 프롬프트
-      <textarea id="profileExtractionPrompt"></textarea>
-      <small>이미지·PDF·비정형 문서에서 기본정보와 추가 기록을 찾는 기준입니다.</small>
-    </label>
-    <label class="field prompt-field">일기 이미지·운동자료 판독 프롬프트
-      <textarea id="dailyImagePrompt"></textarea>
-      <small>삼성 헬스 화면, 운동 앱 캡처, 음식 사진 등에서 일일 데이터를 추출하는 기준입니다.</small>
-    </label>
-    <div class="prompt-actions"><button type="button" class="secondary" id="resetPrompt">기본 프롬프트 복원</button><button type="button" class="primary" id="saveSettings">설정 저장</button></div>
+    <details class="setting-group">
+      <summary>고급 분석 설정</summary>
+      <label class="field prompt-field">사용자 맞춤 AI 분석 프롬프트
+        <textarea id="customPrompt"></textarea>
+      </label>
+      <label class="field prompt-field">업로드 자료 건강정보 추출 프롬프트
+        <textarea id="profileExtractionPrompt"></textarea>
+      </label>
+      <label class="field prompt-field">일기 이미지·운동자료 판독 프롬프트
+        <textarea id="dailyImagePrompt"></textarea>
+      </label>
+      <button type="button" class="secondary" id="resetPrompt">기본 프롬프트 복원</button>
+    </details>
+    <div class="prompt-actions"><button type="button" class="primary" id="saveSettings">키 저장</button></div>
     <p class="setting-help">입력한 키는 이 스마트폰의 브라우저 저장소에만 보관되며 서버에는 저장되지 않습니다. 공용·공공장소 기기에서는 사용하지 마세요. 브라우저 데이터를 삭제하면 키도 함께 삭제됩니다.</p>
   </form>
 </dialog>
 
 <div class="toast" id="toast"></div>
-<script src="app.js?v=20260623-17"></script>
+<script src="app.js?v=20260623-18"></script>
 </body>
 </html>

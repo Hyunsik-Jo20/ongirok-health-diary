@@ -1257,32 +1257,17 @@ $("#downloadProfile").onclick = () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "건강-기본정보.md"; a.click(); URL.revokeObjectURL(a.href);
 };
 $("#saveSettings").onclick = () => {
-  state.settings.aiConnectionMode = $("#aiConnectionMode").value;
-  state.settings.aiApiKey = $("#aiApiKey").value.trim();
-  state.settings.aiApiUrl = $("#aiApiUrl").value.trim();
-  state.settings.aiModel = $("#aiModel").value.trim();
+  state.settings.aiConnectionMode = "proxy";
   state.settings.proxyAiApiKey = $("#proxyAiApiKey").value.trim();
-  state.settings.apiEndpoint = $("#apiEndpoint").value.trim();
-  state.settings.appAccessCode = $("#appAccessCode").value.trim();
+  state.settings.apiEndpoint = localProxyUrl("/api/analyze");
+  state.settings.appAccessCode = "";
   state.settings.weatherApiKey = $("#weatherApiKey").value.trim();
-  state.settings.weatherEndpoint = $("#weatherEndpoint").value.trim();
-  applyWeatherRegion($("#weatherRegion").value);
+  state.settings.weatherEndpoint = localProxyUrl("/api/weather");
   state.settings.customPrompt = $("#customPrompt").value.trim() || defaultPrompt;
   state.settings.profileExtractionPrompt = $("#profileExtractionPrompt").value.trim() || defaultProfileExtractionPrompt;
   state.settings.dailyImagePrompt = $("#dailyImagePrompt").value.trim() || defaultDailyImagePrompt;
   persist(); $("#settingsDialog").close(); loadWeather(); toast("API 키와 분석 설정을 이 브라우저에 저장했어요");
 };
-function renderConnectionMode() {
-  const direct = $("#aiConnectionMode").value === "direct";
-  $("#aiDirectSettings").hidden = !direct;
-  $("#aiProxySettings").hidden = direct;
-}
-$("#aiConnectionMode").onchange = renderConnectionMode;
-$("#weatherRegion").onchange = event => {
-  if (event.target.value === "current") useCurrentLocation();
-  else applyWeatherRegion(event.target.value);
-};
-$("#useCurrentLocation").onclick = useCurrentLocation;
 $("#resetPrompt").onclick = () => {
   $("#customPrompt").value = defaultPrompt;
   $("#profileExtractionPrompt").value = defaultProfileExtractionPrompt;
@@ -1310,24 +1295,17 @@ $$(".bottom-nav button[data-view]").forEach(btn => btn.onclick = () => {
 
 profileIds.forEach(id => $(`#${id}`).value = state.profile[id] || "");
 $("#profileFileList").innerHTML = (state.profile.files || []).map(f => `• ${escapeHtml(f)}`).join("<br>");
-$("#apiEndpoint").value = state.settings.apiEndpoint || localProxyUrl("/api/analyze");
+state.settings.aiConnectionMode = "proxy";
+state.settings.apiEndpoint = localProxyUrl("/api/analyze");
+state.settings.weatherEndpoint = localProxyUrl("/api/weather");
+state.settings.appAccessCode = "";
 $("#proxyAiApiKey").value = state.settings.proxyAiApiKey || "";
-$("#appAccessCode").value = state.settings.appAccessCode || "";
-$("#aiConnectionMode").value = state.settings.aiConnectionMode || "proxy";
-$("#aiApiKey").value = state.settings.aiApiKey || "";
-$("#aiApiUrl").value = state.settings.aiApiUrl || "https://api.openai.com/v1/chat/completions";
-$("#aiModel").value = state.settings.aiModel || "";
-$("#weatherEndpoint").value = state.settings.weatherEndpoint || localProxyUrl("/api/weather");
 $("#weatherApiKey").value = state.settings.weatherApiKey || "";
-const savedWeatherRegion = `${state.settings.weatherLocation || "서울"}|${state.settings.weatherNx || "60"}|${state.settings.weatherNy || "127"}`;
-const matchingWeatherOption = $$("#weatherRegion option").some(option => option.value === savedWeatherRegion);
-$("#weatherRegion").value = matchingWeatherOption ? savedWeatherRegion : "current";
 $("#customPrompt").value = state.settings.customPrompt || defaultPrompt;
 $("#profileExtractionPrompt").value = state.settings.profileExtractionPrompt || defaultProfileExtractionPrompt;
 $("#dailyImagePrompt").value = state.settings.dailyImagePrompt || defaultDailyImagePrompt;
 state.profile.additionalRecords = (state.profile.additionalRecords || []).map(normalizeExtraRecord);
 renderExtraRecords();
-renderConnectionMode();
 renderCover(); renderDate(); loadDay(); setPage(0); loadWeather();
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("/service-worker.js").catch(error => console.warn("서비스 워커 등록 실패", error));
