@@ -51,3 +51,22 @@ http://127.0.0.1:4173
 - `GET /api/weather`: 날씨 공공데이터 API로 쿼리와 키를 중계
 
 이미지는 Data URL 형태로 로컬 프록시에 전달되고, 프록시는 이를 멀티모달 입력으로 OpenAI API에 전달합니다.
+
+## Vercel 무료 배포
+
+GitHub 저장소를 Vercel Hobby 프로젝트로 가져온 뒤 다음 환경변수를 등록합니다.
+
+```env
+OPENAI_API_KEY=실제키
+OPENAI_MODEL=gpt-4.1-mini
+OPENAI_API_URL=https://api.openai.com/v1/responses
+WEATHER_API_KEY=공공데이터포털_키
+WEATHER_API_URL=https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst
+WEATHER_API_KEY_PARAM=serviceKey
+WEATHER_DEFAULT_PARAMS=dataType=JSON&numOfRows=1000&pageNo=1
+APP_ACCESS_CODE=공유할_앱_접근코드
+```
+
+빌드 명령과 출력 폴더는 비워 둡니다. 배포 후 앱의 AI·날씨 프록시 주소는 현재 배포 주소의 `/api/analyze`, `/api/weather`로 자동 설정됩니다.
+
+공공데이터 키도 호출량 제한과 무단 사용 방지를 위해 GitHub나 브라우저 코드에는 넣지 않고 Vercel 환경변수로 관리합니다.

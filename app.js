@@ -129,6 +129,39 @@ const readAttachment = (file) => new Promise(resolve => {
   else reader.readAsDataURL(file);
 });
 
+const compressImageAttachment = (file) => new Promise(resolve => {
+  const reader = new FileReader();
+  reader.onerror = () => resolve({name:file.name,type:file.type,size:file.size,error:"이미지 읽기 실패"});
+  reader.onload = () => {
+    const image = new Image();
+    image.onerror = () => resolve({
+      name:file.name,type:file.type || "image/jpeg",size:file.size,
+      encoding:"data-url",content:reader.result
+    });
+    image.onload = () => {
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      const content = canvas.toDataURL("image/jpeg", 0.78);
+      resolve({
+        name:file.name.replace(/\.[^.]+$/, "") + ".jpg",
+        type:"image/jpeg",
+        size:Math.round(content.length * 0.75),
+        originalSize:file.size,
+        encoding:"data-url",
+        content
+      });
+    };
+    image.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+const readUploadAttachment = file =>
+  file.type.startsWith("image/") ? compressImageAttachment(file) : readAttachment(file);
+
 const profileLabels = {
   pName: "이름/별명", pAge: "나이", pHeight: "키", pWeight: "체중", pWaist: "허리둘레",
   pSex: "성별/생물학적 특성", pHistory: "병력", pHospital: "병원 기록", pCheckup: "건강검진",
@@ -1124,7 +1157,7 @@ $("#missingDataList").addEventListener("click", event => {
 $("#mediaInput").onchange = async e => {
   const files = [...e.target.files];
   toast(`${files.length}개 자료를 읽고 있어요`);
-  volatileDayAttachments = await Promise.all(files.map(readAttachment));
+  volatileDayAttachments = await Promise.all(files.map(readUploadAttachment));
   getDay().attachments = volatileDayAttachments;
   getDay().extractedImageData = null;
   renderAttachmentStatus();
@@ -1145,7 +1178,7 @@ $("#mediaInput").onchange = async e => {
 $("#profileFiles").onchange = async e => {
   const files = [...e.target.files];
   state.profile.files = files.map(f => f.name);
-  volatileProfileAttachments = await Promise.all(files.map(readAttachment));
+  volatileProfileAttachments = await Promise.all(files.map(readUploadAttachment));
   state.profile.attachments = volatileProfileAttachments;
   const importedFields = [];
   const localExtraRecords = [];
