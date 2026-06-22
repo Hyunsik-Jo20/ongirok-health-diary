@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: ongirok-health-diary
+    runtime: node
+    buildCommand: ""
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: OPENAI_API_URL
+        value: https://api.openai.com/v1/responses
+      - key: APP_ACCESS_CODE
+        sync: false
+      - key: RATE_LIMIT_PER_MINUTE
+        value: 30
+      - key: WEATHER_API_KEY
+        sync: false
+      - key: WEATHER_API_URL
+        value: https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst
+      - key: WEATHER_API_KEY_PARAM
+        value: serviceKey
+      - key: WEATHER_DEFAULT_PARAMS
+        value: dataType=JSON&numOfRows=1000&pageNo=1

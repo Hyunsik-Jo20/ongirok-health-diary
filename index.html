@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta name="theme-color" content="#e8dfcc">
+  <title>온기록 — 나를 돌보는 건강 일기</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20260623-15">
+</head>
+<body>
+<main class="phone-shell">
+  <header class="topbar">
+    <button class="icon-btn" id="profileBtn" aria-label="일기장 표지">⌂</button>
+    <div class="brand"><span class="brand-leaf">⌁</span><strong>온기록</strong><small>나를 돌보는 작은 습관</small></div>
+    <button class="icon-btn" id="settingsBtn" aria-label="설정">⋯</button>
+  </header>
+
+  <section class="date-strip">
+    <button id="prevDay" aria-label="이전 날">‹</button>
+    <div><p id="dateLabel"></p><span id="weatherLabel">서울 · 날씨 API 연결 전</span></div>
+    <button id="nextDay" aria-label="다음 날">›</button>
+  </section>
+
+  <div class="book-stage">
+    <section class="cover-page page active" id="coverPage">
+      <div class="cover-stitch"></div>
+      <div class="cover-corner"></div>
+      <span class="cover-kicker">MY WELLNESS JOURNAL</span>
+      <div class="cover-emblem">⌁</div>
+      <h1 id="coverTitle">온기록</h1>
+      <p class="cover-subtitle">나를 돌보는 건강 일기</p>
+      <div class="cover-owner"><span>이 일기장의 주인</span><strong id="coverOwner">아직 이름을 적지 않았어요</strong></div>
+      <blockquote id="coverPledge">“건강한 오늘을 한 페이지씩 쌓아갑니다.”</blockquote>
+      <div class="cover-profile-card">
+        <span>HEALTH PROFILE</span>
+        <div id="coverProfileSummary">건강 기본정보를 등록하면 나에게 맞춘 분석이 시작됩니다.</div>
+        <button type="button" id="coverProfileBtn">기본정보 작성·수정 →</button>
+      </div>
+      <button class="open-diary-btn" id="openDiaryBtn">오늘의 일기 펼치기</button>
+      <button class="share-app-btn" id="shareAppBtn">↗ 온기록 앱 공유하기</button>
+      <small class="cover-privacy">🔒 기록은 사용자의 브라우저에 우선 저장됩니다.</small>
+    </section>
+
+    <section class="diary page" id="recordPage">
+      <div class="paper-hole h1"></div><div class="paper-hole h2"></div><div class="paper-hole h3"></div>
+      <div class="tape tape-top"></div>
+      <label class="entry-title-wrap">
+        <span>오늘의 제목</span>
+        <input id="entryTitle" maxlength="42" placeholder="오늘을 한 문장으로 남겨보세요">
+      </label>
+      <div class="mood-row">
+        <div><span class="eyebrow">TODAY'S CONDITION</span><h1>오늘의 나는,</h1></div>
+        <button class="mood-stamp" id="moodBtn"><span id="moodEmoji">🌿</span><small id="moodText">가뿐해요</small></button>
+      </div>
+      <div class="entry-text" id="entryText" contenteditable="true" data-placeholder="몸과 마음, 먹은 것, 운동, 통증과 수면을 줄글로 편안하게 기록해보세요."></div>
+      <div class="collage" id="collage">
+        <figure class="photo-card default-card card-one"><div class="illustration run-art"><span>🏃</span></div><figcaption>운동 기록</figcaption></figure>
+        <figure class="photo-card default-card card-two"><div class="illustration food-art"><span>🥗</span></div><figcaption>오늘의 식사</figcaption></figure>
+        <div class="scribble">오늘도<br>나를 돌보기!</div>
+      </div>
+      <label class="add-photo"><input type="file" id="mediaInput" accept="image/*,.md,.txt,.json,.csv" multiple hidden><span>＋</span> 사진·운동 데이터·기록 붙이기</label>
+      <div class="attachment-status" id="attachmentStatus">첨부된 자료가 없습니다.</div>
+      <div class="metric-inputs">
+        <label>걸음<input id="stepsInput" inputmode="numeric" placeholder="8420"></label>
+        <label>수면(h)<input id="sleepInput" inputmode="decimal" placeholder="7.3"></label>
+        <label>물(L)<input id="waterInput" inputmode="decimal" placeholder="1.6"></label>
+      </div>
+      <label class="pledge-note"><span>✍ 오늘의 다짐</span><textarea id="dailyPledge" placeholder="내 몸을 위해 오늘 꼭 지키고 싶은 한 가지"></textarea></label>
+    </section>
+
+    <section class="diary report-page page" id="reportPage">
+      <div class="paper-hole h1"></div><div class="paper-hole h2"></div><div class="paper-hole h3"></div>
+      <div class="tape tape-top"></div>
+      <header class="report-head">
+        <div><span class="eyebrow">AI HEALTH REVIEW · PAGE 2</span><h1 id="reportTitle">오늘의 건강 리포트</h1></div>
+        <div class="health-score"><strong id="healthScore">--</strong><small>/ 100</small></div>
+      </header>
+      <div class="report-status" id="reportStatus">첫 페이지의 기록과 자료를 바탕으로 상세 분석을 만들 수 있어요.</div>
+      <section class="report-section">
+        <h3>🏃 운동·활동 분석</h3>
+        <p id="exerciseAnalysis">운동 종류, 시간, 거리, 강도, 회복 상태를 분석합니다.</p>
+        <div class="analysis-metrics" id="analysisMetrics"></div>
+      </section>
+      <section class="report-section two-col">
+        <div><h3>🌙 회복과 수면</h3><p id="recoveryAnalysis">수면과 피로 기록을 살펴봅니다.</p></div>
+        <div><h3>🥗 영양과 수분</h3><p id="nutritionAnalysis">식사 사진과 기록을 살펴봅니다.</p></div>
+      </section>
+      <section class="report-section">
+        <h3>🔎 관찰된 신호와 근거</h3>
+        <ul id="evidenceList"><li>아직 분석된 기록이 없습니다.</li></ul>
+      </section>
+      <section class="report-section missing-section">
+        <h3>🧩 보완하면 더 정확해져요</h3>
+        <div id="missingDataList" class="missing-data-list">
+          <p class="missing-empty">분석 후 필요한 데이터와 추가 방법을 안내합니다.</p>
+        </div>
+      </section>
+      <section class="report-section action-section">
+        <h3>오늘부터 할 일</h3>
+        <div id="actionList" class="action-list"></div>
+      </section>
+      <section class="report-section week-plan">
+        <h3>📅 이번 주 제안</h3>
+        <div id="weekPlan"></div>
+      </section>
+      <p class="medical-note">이 분석은 건강관리를 돕기 위한 참고 정보이며 의료 진단을 대신하지 않습니다. 지속되거나 심한 증상은 의료진과 상담하세요.</p>
+      <button class="primary analyze-full" id="analyzeBtn">내 기록 상세 분석하기 ✦</button>
+    </section>
+  </div>
+
+  <div class="page-switcher">
+    <button class="page-arrow" id="prevPage" disabled>‹</button>
+    <button class="page-tab active" data-page="0"><i></i><span>표지</span></button>
+    <button class="page-tab" data-page="1"><i></i><span>1쪽 · 기록</span></button>
+    <button class="page-tab" data-page="2"><i></i><span>2쪽 · 분석</span></button>
+    <button class="page-arrow" id="nextPage">›</button>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="active" data-view="diary"><span>▤</span>일기장</button>
+    <button data-view="calendar"><span>▦</span>달력</button>
+    <button class="write-btn" id="writeBtn"><span>＋</span></button>
+    <button data-view="insight"><span>✦</span>인사이트</button>
+    <button data-view="me"><span>♙</span>나의 기록</button>
+  </nav>
+</main>
+
+<dialog id="moodDialog" class="sheet">
+  <form method="dialog"><div class="sheet-handle"></div><h2>오늘의 컨디션은?</h2>
+    <div class="mood-grid">
+      <button value="최고예요" data-emoji="☀️">☀️<span>최고예요</span></button>
+      <button value="가뿐해요" data-emoji="🌿">🌿<span>가뿐해요</span></button>
+      <button value="그럭저럭" data-emoji="☁️">☁️<span>그럭저럭</span></button>
+      <button value="지쳤어요" data-emoji="🌧️">🌧️<span>지쳤어요</span></button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="profileDialog" class="sheet tall-sheet">
+  <form method="dialog">
+    <div class="sheet-handle"></div><button class="close" value="cancel">×</button>
+    <span class="eyebrow">MY HEALTH PROFILE</span><h2>건강 기본 정보</h2>
+    <p>기록 분석의 기준이 되는 정보입니다. 모르는 항목은 비워두어도 괜찮아요.</p>
+    <div class="form-grid">
+      <label>이름 또는 별명<input id="pName" placeholder="온이"></label>
+      <label>생년 또는 나이<input id="pAge" inputmode="numeric" placeholder="32"></label>
+      <label>키 (cm)<input id="pHeight" inputmode="decimal" placeholder="165"></label>
+      <label>체중 (kg)<input id="pWeight" inputmode="decimal" placeholder="58"></label>
+      <label>허리둘레 (cm)<input id="pWaist" inputmode="decimal" placeholder="72"></label>
+      <label>성별/생물학적 특성<input id="pSex" placeholder="선택 입력"></label>
+    </div>
+    <label class="field">진단받은 병력<textarea id="pHistory" placeholder="진단명, 진단 시점, 현재 상태"></textarea></label>
+    <label class="field">병원 진료·수술·입원 기록<textarea id="pHospital" placeholder="병원 방문 이유, 치료 내용, 날짜"></textarea></label>
+    <label class="field">건강검진·혈액검사 기록<textarea id="pCheckup" placeholder="혈압, 혈당, 콜레스테롤, 간 수치 등"></textarea></label>
+    <label class="field">복용약·영양제·알레르기<textarea id="pMedication" placeholder="이름, 용량, 복용 빈도 / 알레르기"></textarea></label>
+    <label class="field">평소 운동·수면·식습관<textarea id="pLifestyle" placeholder="주간 운동, 평균 수면, 식사 패턴, 음주·흡연"></textarea></label>
+    <label class="field">통증·주의할 신체 부위<textarea id="pConcerns" placeholder="예: 오래 앉으면 허리 통증, 오른쪽 무릎 주의"></textarea></label>
+    <label class="field">기타 건강 정보<textarea id="pNotes" placeholder="가족력, 예방접종, 여성 건강, 기타 참고 사항"></textarea></label>
+    <section class="extra-records-section">
+      <div class="extra-records-head">
+        <div><strong>추가 기록</strong><small>정해진 항목에 담기 어려운 건강정보</small></div>
+        <button type="button" id="addExtraRecord">＋ 직접 추가</button>
+      </div>
+      <div id="extraRecords" class="extra-records"></div>
+    </section>
+    <label class="field pledge-profile">나의 건강 다짐<textarea id="pPledge" placeholder="건강관리를 시작하는 나에게 한마디"></textarea></label>
+    <label class="upload-zone"><input type="file" id="profileFiles" accept="image/*,.md,.txt,.pdf,.csv,.json" multiple hidden><span>📎</span><strong>기존 건강 자료 가져오기</strong><small>병원 기록, 검진표, 인바디, Markdown 등</small></label>
+    <div id="profileFileList" class="file-list"></div>
+    <div id="profileImportResult" class="import-result" hidden></div>
+    <button type="button" class="primary" id="saveProfile">프로필 Markdown으로 저장</button>
+    <button type="button" class="secondary" id="downloadProfile">Markdown 내려받기</button>
+    <small class="privacy">🔒 입력 정보는 우선 이 브라우저에 저장됩니다.</small>
+  </form>
+</dialog>
+
+<dialog id="settingsDialog" class="sheet tall-sheet">
+  <form method="dialog">
+    <div class="sheet-handle"></div><button class="close" value="cancel">×</button>
+    <span class="eyebrow">AI & DATA SETTINGS</span><h2>API 연결 설정</h2>
+    <div class="setting-group">
+      <strong>AI API</strong>
+      <label class="field">연결 방식
+        <select id="aiConnectionMode">
+          <option value="direct">API 키로 직접 연결</option>
+          <option value="proxy">내 서버 프록시로 연결</option>
+        </select>
+      </label>
+      <div id="aiDirectSettings">
+        <label class="field">AI API 키<input id="aiApiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+        <label class="field">AI API 주소<input id="aiApiUrl" placeholder="https://api.openai.com/v1/chat/completions"></label>
+        <label class="field">AI 모델<input id="aiModel" placeholder="사용할 멀티모달 모델명"></label>
+      </div>
+      <div id="aiProxySettings">
+        <label class="field">프록시 주소<input id="apiEndpoint" placeholder="https://내서버.com/api/analyze"></label>
+        <label class="field">앱 접근코드<input id="appAccessCode" type="password" autocomplete="off" placeholder="배포 서버에 설정한 공유 코드"></label>
+      </div>
+    </div>
+    <div class="setting-group">
+      <strong>날씨 프록시</strong>
+      <label class="field">날씨 프록시 주소<input id="weatherEndpoint" placeholder="http://127.0.0.1:4173/api/weather"></label>
+      <label class="field">날씨 지역
+        <select id="weatherRegion">
+          <option value="서울|60|127">서울</option>
+          <option value="부산|98|76">부산</option>
+          <option value="대구|89|90">대구</option>
+          <option value="인천|55|124">인천</option>
+          <option value="광주|58|74">광주</option>
+          <option value="대전|67|100">대전</option>
+          <option value="울산|102|84">울산</option>
+          <option value="세종|66|103">세종</option>
+          <option value="수원|60|121">수원</option>
+          <option value="제주|52|38">제주</option>
+          <option value="current">현재 위치</option>
+        </select>
+      </label>
+      <button type="button" class="secondary location-btn" id="useCurrentLocation">⌖ 현재 위치 사용</button>
+      <small class="setting-caption">공공데이터 API 키와 원본 주소는 `.env`에만 저장됩니다. 격자 좌표는 앱이 자동 처리합니다.</small>
+    </div>
+    <label class="field prompt-field">사용자 맞춤 AI 분석 프롬프트
+      <textarea id="customPrompt"></textarea>
+      <small>사용자의 건강 목표나 선호 방식에 맞게 자유롭게 고칠 수 있습니다.</small>
+    </label>
+    <label class="field prompt-field">업로드 자료 건강정보 추출 프롬프트
+      <textarea id="profileExtractionPrompt"></textarea>
+      <small>이미지·PDF·비정형 문서에서 기본정보와 추가 기록을 찾는 기준입니다.</small>
+    </label>
+    <label class="field prompt-field">일기 이미지·운동자료 판독 프롬프트
+      <textarea id="dailyImagePrompt"></textarea>
+      <small>삼성 헬스 화면, 운동 앱 캡처, 음식 사진 등에서 일일 데이터를 추출하는 기준입니다.</small>
+    </label>
+    <div class="prompt-actions"><button type="button" class="secondary" id="resetPrompt">기본 프롬프트 복원</button><button type="button" class="primary" id="saveSettings">설정 저장</button></div>
+    <p class="setting-help">날씨 키는 `.env`에서만 관리합니다. AI도 프록시 연결을 권장하며, 직접 연결을 선택한 경우에만 AI 키가 브라우저에 저장됩니다.</p>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+<script src="app.js?v=20260623-15"></script>
+</body>
+</html>

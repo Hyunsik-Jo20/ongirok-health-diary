@@ -1,0 +1,18 @@
+{
+  "name": "온기록 — 나를 돌보는 건강 일기",
+  "short_name": "온기록",
+  "description": "글과 사진으로 기록하고 AI가 분석하는 개인 건강 일기",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e9e1cf",
+  "theme_color": "#52644e",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
