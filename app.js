@@ -518,7 +518,7 @@ function parseAIJson(raw) {
 function aiConfigured() {
   const mode = state.settings.aiConnectionMode || "direct";
   return mode === "proxy"
-    ? Boolean(state.settings.apiEndpoint)
+    ? Boolean(state.settings.apiEndpoint && (state.settings.proxyAiApiKey || state.settings.appAccessCode))
     : Boolean(state.settings.aiApiKey && state.settings.aiApiUrl && state.settings.aiModel);
 }
 function localProxyUrl(pathname) {
@@ -527,6 +527,7 @@ function localProxyUrl(pathname) {
 function proxyHeaders() {
   const headers = {"Content-Type":"application/json"};
   if (state.settings.appAccessCode) headers["X-App-Code"] = state.settings.appAccessCode;
+  if (state.settings.proxyAiApiKey) headers["X-OpenAI-Key"] = state.settings.proxyAiApiKey;
   return headers;
 }
 async function assertLocalProxyAvailable(endpoint) {
@@ -806,7 +807,10 @@ async function loadWeather() {
     url.searchParams.set("nx", state.settings.weatherNx || "60");
     url.searchParams.set("ny", state.settings.weatherNy || "127");
     const response = await fetch(url, {
-      headers: state.settings.appAccessCode ? {"X-App-Code":state.settings.appAccessCode} : {}
+      headers: {
+        ...(state.settings.appAccessCode ? {"X-App-Code":state.settings.appAccessCode} : {}),
+        ...(state.settings.weatherApiKey ? {"X-Weather-Key":state.settings.weatherApiKey} : {})
+      }
     });
     if (!response.ok) throw new Error(`날씨 API ${response.status}`);
     const weather = parseKmaWeather(await response.json());
@@ -1257,8 +1261,10 @@ $("#saveSettings").onclick = () => {
   state.settings.aiApiKey = $("#aiApiKey").value.trim();
   state.settings.aiApiUrl = $("#aiApiUrl").value.trim();
   state.settings.aiModel = $("#aiModel").value.trim();
+  state.settings.proxyAiApiKey = $("#proxyAiApiKey").value.trim();
   state.settings.apiEndpoint = $("#apiEndpoint").value.trim();
   state.settings.appAccessCode = $("#appAccessCode").value.trim();
+  state.settings.weatherApiKey = $("#weatherApiKey").value.trim();
   state.settings.weatherEndpoint = $("#weatherEndpoint").value.trim();
   applyWeatherRegion($("#weatherRegion").value);
   state.settings.customPrompt = $("#customPrompt").value.trim() || defaultPrompt;
@@ -1305,12 +1311,14 @@ $$(".bottom-nav button[data-view]").forEach(btn => btn.onclick = () => {
 profileIds.forEach(id => $(`#${id}`).value = state.profile[id] || "");
 $("#profileFileList").innerHTML = (state.profile.files || []).map(f => `• ${escapeHtml(f)}`).join("<br>");
 $("#apiEndpoint").value = state.settings.apiEndpoint || localProxyUrl("/api/analyze");
+$("#proxyAiApiKey").value = state.settings.proxyAiApiKey || "";
 $("#appAccessCode").value = state.settings.appAccessCode || "";
 $("#aiConnectionMode").value = state.settings.aiConnectionMode || "proxy";
 $("#aiApiKey").value = state.settings.aiApiKey || "";
 $("#aiApiUrl").value = state.settings.aiApiUrl || "https://api.openai.com/v1/chat/completions";
 $("#aiModel").value = state.settings.aiModel || "";
 $("#weatherEndpoint").value = state.settings.weatherEndpoint || localProxyUrl("/api/weather");
+$("#weatherApiKey").value = state.settings.weatherApiKey || "";
 const savedWeatherRegion = `${state.settings.weatherLocation || "서울"}|${state.settings.weatherNx || "60"}|${state.settings.weatherNy || "127"}`;
 const matchingWeatherOption = $$("#weatherRegion option").some(option => option.value === savedWeatherRegion);
 $("#weatherRegion").value = matchingWeatherOption ? savedWeatherRegion : "current";

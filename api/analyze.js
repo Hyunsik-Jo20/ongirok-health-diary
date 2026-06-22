@@ -2,8 +2,10 @@ const {json, authorize, extractOutputText, parseModelJson, requestBody} = requir
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, {error:"POST 요청만 지원합니다."});
-  if (!authorize(req, res)) return;
-  if (!process.env.OPENAI_API_KEY) return json(res, 503, {error:"OPENAI_API_KEY가 설정되지 않았습니다."});
+  const userApiKey = String(req.headers["x-openai-key"] || "").trim();
+  if (!userApiKey && !authorize(req, res)) return;
+  const apiKey = userApiKey || process.env.OPENAI_API_KEY;
+  if (!apiKey) return json(res, 503, {error:"OpenAI API 키를 앱 설정창에 입력해 주세요."});
 
   try {
     const body = requestBody(req);
@@ -22,7 +24,7 @@ module.exports = async function handler(req, res) {
     const response = await fetch(process.env.OPENAI_API_URL || "https://api.openai.com/v1/responses", {
       method:"POST",
       headers:{
-        "Authorization":`Bearer ${process.env.OPENAI_API_KEY}`,
+        "Authorization":`Bearer ${apiKey}`,
         "Content-Type":"application/json"
       },
       body:JSON.stringify({
