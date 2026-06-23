@@ -227,6 +227,26 @@
       <label class="field">내 OpenAI API 키<input id="proxyAiApiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
       <label class="field">내 Gemini API 키<input id="geminiApiKey" type="password" autocomplete="off" placeholder="Google AI Studio에서 발급한 키"></label>
       <label class="field">내 공공데이터포털 API 키<input id="weatherApiKey" type="password" autocomplete="off" placeholder="발급받은 일반 인증키"></label>
+      <label class="field">날씨 지역
+        <select id="weatherRegion">
+          <option value="서울|60|127">서울</option>
+          <option value="부산|98|76">부산</option>
+          <option value="대구|89|90">대구</option>
+          <option value="인천|55|124">인천</option>
+          <option value="광주|58|74">광주</option>
+          <option value="대전|67|100">대전</option>
+          <option value="울산|102|84">울산</option>
+          <option value="세종|66|103">세종</option>
+          <option value="수원|60|121">수원</option>
+          <option value="제주|52|38">제주</option>
+          <option value="current">현재 위치</option>
+        </select>
+      </label>
+      <div class="weather-location-actions">
+        <button type="button" class="secondary" id="applyWeatherLocation">이 지역으로 설정</button>
+        <button type="button" class="secondary" id="useCurrentLocation">⌖ 현재 위치로 설정</button>
+      </div>
+      <div id="weatherLocationStatus" class="location-status">현재 설정: 서울</div>
       <small class="setting-caption">선택한 AI의 키를 사용합니다. 모든 키는 이 스마트폰에만 저장됩니다.</small>
     </div>
     <details class="setting-group">
@@ -248,6 +268,6 @@
 </dialog>
 
 <div class="toast" id="toast"></div>
-<script src="app.js?v=20260623-23"></script>
+<script src="app.js?v=20260623-24"></script>
 </body>
 </html>

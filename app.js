@@ -812,6 +812,8 @@ function applyWeatherRegion(value) {
   state.settings.weatherLocation = name;
   state.settings.weatherNx = nx;
   state.settings.weatherNy = ny;
+  const status = $("#weatherLocationStatus");
+  if (status) status.textContent = `현재 설정: ${name}`;
 }
 function useCurrentLocation() {
   if (!navigator.geolocation) return toast("이 브라우저는 현재 위치를 지원하지 않아요");
@@ -823,6 +825,7 @@ function useCurrentLocation() {
     state.settings.weatherNx = String(grid.nx);
     state.settings.weatherNy = String(grid.ny);
     $("#weatherRegion").value = "current";
+    $("#weatherLocationStatus").textContent = `현재 설정: 현재 위치 (${grid.nx}, ${grid.ny})`;
     persist(); loadWeather();
     button.disabled = false; button.textContent = "✓ 현재 위치 적용됨";
     toast("현재 위치를 날씨 지역으로 설정했어요");
@@ -1477,12 +1480,22 @@ $("#saveSettings").onclick = () => {
   state.settings.appAccessCode = "";
   state.settings.weatherApiKey = $("#weatherApiKey").value.trim();
   state.settings.weatherEndpoint = localProxyUrl("/api/weather");
+  if ($("#weatherRegion").value !== "current") applyWeatherRegion($("#weatherRegion").value);
   state.settings.customPrompt = $("#customPrompt").value.trim() || defaultPrompt;
   state.settings.profileExtractionPrompt = $("#profileExtractionPrompt").value.trim() || defaultProfileExtractionPrompt;
   state.settings.dailyImagePrompt = $("#dailyImagePrompt").value.trim() || defaultDailyImagePrompt;
   persist(); $("#settingsDialog").close(); loadWeather();
   toast(`${state.settings.aiProvider === "gemini" ? "Gemini" : "OpenAI"} 분석 설정을 저장했어요`);
 };
+$("#applyWeatherLocation").onclick = () => {
+  const value = $("#weatherRegion").value;
+  if (value === "current") return useCurrentLocation();
+  applyWeatherRegion(value);
+  persist();
+  loadWeather();
+  toast(`${state.settings.weatherLocation} 날씨로 설정했어요`);
+};
+$("#useCurrentLocation").onclick = useCurrentLocation;
 $("#resetPrompt").onclick = () => {
   $("#customPrompt").value = defaultPrompt;
   $("#profileExtractionPrompt").value = defaultProfileExtractionPrompt;
@@ -1527,6 +1540,10 @@ $("#proxyAiApiKey").value = state.settings.proxyAiApiKey || "";
 $("#geminiApiKey").value = state.settings.geminiApiKey || "";
 $("#aiProvider").value = state.settings.aiProvider || "openai";
 $("#weatherApiKey").value = state.settings.weatherApiKey || "";
+const savedWeatherRegion = `${state.settings.weatherLocation || "서울"}|${state.settings.weatherNx || "60"}|${state.settings.weatherNy || "127"}`;
+const matchingWeatherOption = $$("#weatherRegion option").some(option => option.value === savedWeatherRegion);
+$("#weatherRegion").value = matchingWeatherOption ? savedWeatherRegion : (state.settings.weatherLocation === "현재 위치" ? "current" : "서울|60|127");
+$("#weatherLocationStatus").textContent = `현재 설정: ${state.settings.weatherLocation || "서울"}`;
 $("#customPrompt").value = state.settings.customPrompt || defaultPrompt;
 $("#profileExtractionPrompt").value = state.settings.profileExtractionPrompt || defaultProfileExtractionPrompt;
 $("#dailyImagePrompt").value = state.settings.dailyImagePrompt || defaultDailyImagePrompt;

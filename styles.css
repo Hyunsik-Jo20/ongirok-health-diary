@@ -268,6 +268,9 @@ textarea { height: 92px; resize: none; line-height: 1.6; }
 .setting-group > strong { font-family: "Gaegu"; font-size: 18px; color: var(--sage-dark); }
 .setting-caption { display: block; color: var(--muted); font-size: 9px; line-height: 1.5; }
 .location-btn { margin: -4px 0 9px; }
+.weather-location-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.weather-location-actions .secondary { margin: 0; padding: 10px 6px; font-size: 9px; }
+.location-status { margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: #e9eddf; color: var(--sage-dark); font-size: 9px; text-align: center; }
 .field textarea { margin-top: 6px; height: 75px; color: var(--ink); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 14px 0; }
 .form-grid label { font-size: 10px; color: var(--muted); }.form-grid input { margin-top: 5px; padding: 10px; color: var(--ink); }
