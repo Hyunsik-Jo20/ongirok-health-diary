@@ -170,7 +170,10 @@
       <div id="extraRecords" class="extra-records"></div>
     </section>
     <label class="field pledge-profile">나의 건강 다짐<textarea id="pPledge" placeholder="건강관리를 시작하는 나에게 한마디"></textarea></label>
-    <label class="upload-zone"><input type="file" id="profileFiles" accept="image/*,.md,.txt,.pdf,.csv,.json" multiple hidden><span>📎</span><strong>기존 건강 자료 가져오기</strong><small>병원 기록, 검진표, 인바디, Markdown 등</small></label>
+    <div class="profile-upload-options">
+      <label class="upload-zone"><input type="file" id="profileImages" accept="image/*" multiple hidden><span>📷</span><strong>사진·카메라로 가져오기</strong><small>검진표, 인바디, 병원 기록 사진</small></label>
+      <label class="upload-zone"><input type="file" id="profileFiles" accept=".md,.markdown,.txt,.pdf,.csv,.json,text/plain,text/markdown,text/csv,application/pdf,application/json" multiple hidden><span>📎</span><strong>파일 가져오기</strong><small>MD · PDF · TXT · CSV · JSON</small></label>
+    </div>
     <div id="profileFileList" class="file-list"></div>
     <div id="profileImportResult" class="import-result" hidden></div>
     <button type="button" class="primary" id="saveProfile">프로필 Markdown으로 저장</button>
@@ -208,6 +211,6 @@
 </dialog>
 
 <div class="toast" id="toast"></div>
-<script src="app.js?v=20260623-18"></script>
+<script src="app.js?v=20260623-19"></script>
 </body>
 </html>

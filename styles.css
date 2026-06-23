@@ -241,6 +241,9 @@ textarea, .field input, .form-grid input { width: 100%; border: 1px solid #d9d1c
 textarea { height: 92px; resize: none; line-height: 1.6; }
 .upload-zone { margin: 12px 0; padding: 16px; border: 1px dashed #aaa994; border-radius: 10px; display: grid; place-items: center; cursor: pointer; }
 .upload-zone span { font-size: 22px; }.upload-zone strong { font-size: 12px; }.upload-zone small { color: var(--muted); font-size: 9px; }
+.profile-upload-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.profile-upload-options .upload-zone { margin: 0; min-height: 104px; padding: 12px 8px; text-align: center; align-content: center; }
+.profile-upload-options .upload-zone small { margin-top: 4px; line-height: 1.45; }
 .file-list { font-size: 10px; color: var(--sage-dark); margin-bottom: 10px; }
 .import-result { margin: 9px 0 12px; padding: 10px 12px; border-radius: 9px; background: #e7ecdf; color: var(--sage-dark); font-size: 10px; line-height: 1.55; }
 .extra-records-section { margin: 15px 0; padding: 12px; border: 1px dashed #bdb8a8; border-radius: 11px; background: rgba(239,234,218,.55); }

@@ -1179,8 +1179,9 @@ $("#mediaInput").onchange = async e => {
   const imageCount = files.filter(file => file.type.startsWith("image/")).length;
   toast(imageCount ? `이미지 ${imageCount}장을 첨부했어요. 분석 버튼을 누르면 AI가 판독합니다.` : `${files.length}개 자료를 오늘 기록에 연결했어요`);
 };
-$("#profileFiles").onchange = async e => {
+async function importProfileFiles(e) {
   const files = [...e.target.files];
+  if (!files.length) return;
   state.profile.files = files.map(f => f.name);
   volatileProfileAttachments = await Promise.all(files.map(readUploadAttachment));
   state.profile.attachments = volatileProfileAttachments;
@@ -1230,7 +1231,7 @@ $("#profileFiles").onchange = async e => {
       }
     } else {
       result.hidden = false;
-      result.innerHTML += `${result.innerHTML ? "<br>" : ""}<strong>이미지·PDF·비정형 자료의 자동 입력에는 설정창의 AI API 키·주소·모델이 필요해요.</strong>`;
+      result.innerHTML += `${result.innerHTML ? "<br>" : ""}<strong>이미지·PDF·비정형 자료의 자동 입력에는 설정창의 OpenAI API 키가 필요해요.</strong>`;
     }
   }
   const saved = persist();
@@ -1238,8 +1239,10 @@ $("#profileFiles").onchange = async e => {
     result.hidden = false;
     result.innerHTML += `${result.innerHTML ? "<br>" : ""}<strong>저장 실패:</strong> 브라우저 저장 공간을 확보한 뒤 다시 시도해 주세요.`;
   }
-  $("#profileFiles").value = "";
-};
+  e.target.value = "";
+}
+$("#profileImages").onchange = importProfileFiles;
+$("#profileFiles").onchange = importProfileFiles;
 $("#saveProfile").onclick = () => {
   saveExtraRecordsFromUI();
   profileIds.forEach(id => state.profile[id] = $(`#${id}`).value.trim());
