@@ -64,7 +64,10 @@
         <figure class="photo-card default-card card-two"><div class="illustration food-art"><span>🥗</span></div><figcaption>오늘의 식사</figcaption></figure>
         <div class="scribble">오늘도<br>나를 돌보기!</div>
       </div>
-      <label class="add-photo"><input type="file" id="mediaInput" accept="image/*,.md,.txt,.json,.csv" multiple hidden><span>＋</span> 사진·운동 데이터·기록 붙이기</label>
+      <div class="daily-upload-options">
+        <label class="add-photo"><input type="file" id="dailyImages" accept="image/*" multiple hidden><span>📷</span> 사진·카메라</label>
+        <label class="add-photo"><input type="file" id="dailyFiles" accept=".md,.markdown,.txt,.pdf,.csv,.json,text/plain,text/markdown,text/csv,application/pdf,application/json" multiple hidden><span>📎</span> 파일 가져오기</label>
+      </div>
       <div class="attachment-status" id="attachmentStatus">첨부된 자료가 없습니다.</div>
       <div class="metric-inputs">
         <label>걸음<input id="stepsInput" inputmode="numeric" placeholder="8420"></label>
@@ -211,6 +214,6 @@
 </dialog>
 
 <div class="toast" id="toast"></div>
-<script src="app.js?v=20260623-19"></script>
+<script src="app.js?v=20260623-20"></script>
 </body>
 </html>

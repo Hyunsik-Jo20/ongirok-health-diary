@@ -1,4 +1,4 @@
-const CACHE = "ongirok-v5";
+const CACHE = "ongirok-v6";
 const ASSETS = ["/", "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", event => {

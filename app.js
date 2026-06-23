@@ -1041,7 +1041,7 @@ function openMissingDataInput(kind) {
     if (kind === "sleep") return $("#sleepInput").focus();
     if (kind === "water") return $("#waterInput").focus();
     if (kind === "steps") return $("#stepsInput").focus();
-    if (kind === "workout" || kind === "food") return $("#mediaInput").click();
+    if (kind === "workout" || kind === "food") return $("#dailyImages").click();
     $("#entryText").focus();
     $("#entryText").scrollIntoView({behavior:"smooth",block:"center"});
   }, 220);
@@ -1158,10 +1158,16 @@ $("#missingDataList").addEventListener("click", event => {
   if (button) openMissingDataInput(button.dataset.missingKind);
 });
 
-$("#mediaInput").onchange = async e => {
+async function importDailyFiles(e) {
   const files = [...e.target.files];
+  if (!files.length) return;
   toast(`${files.length}개 자료를 읽고 있어요`);
-  volatileDayAttachments = await Promise.all(files.map(readUploadAttachment));
+  const newAttachments = await Promise.all(files.map(readUploadAttachment));
+  const existing = volatileDayAttachments.length ? volatileDayAttachments : (getDay().attachments || []);
+  volatileDayAttachments = [
+    ...existing.filter(old => !newAttachments.some(item => item.name === old.name && item.size === old.size)),
+    ...newAttachments
+  ];
   getDay().attachments = volatileDayAttachments;
   getDay().extractedImageData = null;
   renderAttachmentStatus();
@@ -1178,7 +1184,10 @@ $("#mediaInput").onchange = async e => {
   if (!persist()) toast("브라우저 저장 공간이 부족해요. 불필요한 사이트 데이터를 정리해 주세요.");
   const imageCount = files.filter(file => file.type.startsWith("image/")).length;
   toast(imageCount ? `이미지 ${imageCount}장을 첨부했어요. 분석 버튼을 누르면 AI가 판독합니다.` : `${files.length}개 자료를 오늘 기록에 연결했어요`);
-};
+  e.target.value = "";
+}
+$("#dailyImages").onchange = importDailyFiles;
+$("#dailyFiles").onchange = importDailyFiles;
 async function importProfileFiles(e) {
   const files = [...e.target.files];
   if (!files.length) return;
