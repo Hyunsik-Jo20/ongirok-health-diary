@@ -231,6 +231,7 @@ h1 { font-family: "Nanum Pen Script"; font-size: 31px; font-weight: 400; margin:
 .sheet { border: 0; border-radius: 22px 22px 0 0; padding: 0; width: min(100%, 430px); margin: auto auto 0; color: var(--ink); background: #f9f5ea; box-shadow: 0 -12px 40px rgba(45,40,30,.2); }
 .sheet::backdrop { background: rgba(44,43,36,.45); backdrop-filter: blur(2px); }
 .sheet form { padding: 12px 22px 30px; position: relative; }
+.feature-panel { padding: 12px 22px 34px; position: relative; }
 .tall-sheet { max-height: 92vh; overflow-y: auto; }
 .sheet-handle { width: 40px; height: 4px; background: #cbc6b8; border-radius: 3px; margin: 0 auto 20px; }
 .sheet h2 { font-family: "Gaegu"; font-size: 25px; margin: 5px 0 12px; }
@@ -276,6 +277,24 @@ textarea { height: 92px; resize: none; line-height: 1.6; }
 .prompt-field small { display: block; margin-top: 5px; }
 .prompt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }.prompt-actions .secondary { margin: 0; }
 .setting-help { padding: 10px; background: #eee8d8; border-radius: 8px; }
+.feature-sheet { min-height: 65vh; }
+.calendar-weekdays,.calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
+.calendar-weekdays { margin: 15px 0 7px; text-align: center; color: var(--muted); font-size: 9px; }
+.calendar-grid button { position: relative; min-height: 52px; border: 1px solid #e0d8c8; border-radius: 10px; background: #fffdf7; color: var(--ink); cursor: pointer; }
+.calendar-grid button strong { font-size: 12px; }.calendar-grid button i { position: absolute; left: 50%; bottom: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--sage); transform: translateX(-50%); }
+.calendar-grid button small { display: block; margin-top: 2px; color: var(--sage-dark); font-size: 8px; }
+.calendar-grid button.has-record { background: #eef0e6; border-color: #bdc7b5; }
+.feature-help,.feature-empty { color: var(--muted); font-size: 10px; line-height: 1.6; text-align: center; }
+.insight-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.insight-summary article { padding: 12px; border-radius: 12px; background: #eeeadc; display: grid; gap: 4px; }
+.insight-summary span { color: var(--muted); font-size: 9px; }.insight-summary strong { font-size: 15px; color: var(--sage-dark); }
+.feature-section { margin-top: 18px; }.feature-section h3 { font-family: "Gaegu"; font-size: 19px; }
+.trend-list,.records-list { display: grid; gap: 8px; }
+.trend-list button,.records-list button { width: 100%; border: 1px solid #ddd5c4; border-radius: 11px; padding: 11px; background: #fffdf7; color: var(--ink); text-align: left; cursor: pointer; }
+.trend-list button { display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 7px; }
+.trend-list time,.records-list time { color: var(--sage-dark); font-size: 9px; }.trend-list span { color: var(--muted); font-size: 9px; }.trend-list strong { font-size: 11px; }
+.records-list button { display: grid; gap: 5px; }.records-list button > strong { font-family: "Gaegu"; font-size: 17px; }
+.records-list p { margin: 0; color: #5f5d54; font-size: 10px; line-height: 1.5; }.records-list small { color: var(--muted); font-size: 8px; }
 .toast { position: fixed; z-index: 30; left: 50%; bottom: 100px; transform: translate(-50%, 20px); background: #394136; color: white; padding: 10px 16px; border-radius: 30px; font-size: 11px; opacity: 0; pointer-events: none; transition: .25s; white-space: nowrap; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .analyzing { animation: pulse 1s infinite alternate; }

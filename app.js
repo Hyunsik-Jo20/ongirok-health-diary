@@ -529,9 +529,12 @@ function parseAIJson(raw) {
   return raw;
 }
 function aiConfigured() {
-  const mode = state.settings.aiConnectionMode || "direct";
+  const mode = state.settings.aiConnectionMode || "proxy";
+  const provider = state.settings.aiProvider || "openai";
   return mode === "proxy"
-    ? Boolean(state.settings.apiEndpoint && (state.settings.proxyAiApiKey || state.settings.appAccessCode))
+    ? Boolean(state.settings.apiEndpoint && (
+        provider === "gemini" ? state.settings.geminiApiKey : state.settings.proxyAiApiKey
+      ))
     : Boolean(state.settings.aiApiKey && state.settings.aiApiUrl && state.settings.aiModel);
 }
 function localProxyUrl(pathname) {
@@ -539,8 +542,11 @@ function localProxyUrl(pathname) {
 }
 function proxyHeaders() {
   const headers = {"Content-Type":"application/json"};
+  const provider = state.settings.aiProvider || "openai";
+  headers["X-AI-Provider"] = provider;
   if (state.settings.appAccessCode) headers["X-App-Code"] = state.settings.appAccessCode;
-  if (state.settings.proxyAiApiKey) headers["X-OpenAI-Key"] = state.settings.proxyAiApiKey;
+  if (provider === "gemini" && state.settings.geminiApiKey) headers["X-Gemini-Key"] = state.settings.geminiApiKey;
+  if (provider === "openai" && state.settings.proxyAiApiKey) headers["X-OpenAI-Key"] = state.settings.proxyAiApiKey;
   return headers;
 }
 async function assertLocalProxyAvailable(endpoint) {
@@ -863,6 +869,92 @@ function shiftDay(amount) {
   currentDate.setDate(currentDate.getDate() + amount);
   volatileDayAttachments = [];
   renderDate(); loadDay(); setPage(1); persist();
+}
+function openDateRecord(key, page = 1) {
+  saveDay();
+  currentDate = new Date(`${key}T12:00:00`);
+  volatileDayAttachments = [];
+  renderDate();
+  loadDay();
+  setPage(page);
+  persist();
+  $$(".feature-sheet").forEach(dialog => dialog.open && dialog.close());
+}
+function recordedDays() {
+  return Object.entries(state.days || {})
+    .filter(([, day]) => day && (
+      day.entryTitle || day.entryText || day.stepsInput || day.sleepInput ||
+      day.waterInput || day.analysis || (day.attachments || []).length
+    ))
+    .sort(([a], [b]) => b.localeCompare(a));
+}
+function renderCalendar() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  $("#calendarTitle").textContent = `${year}년 ${month + 1}월 건강 캘린더`;
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const cells = Array.from({length:firstDay}, () => `<span class="calendar-empty"></span>`);
+  for (let date = 1; date <= lastDate; date += 1) {
+    const key = `${year}-${String(month+1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
+    const day = state.days[key] || {};
+    const hasRecord = recordedDays().some(([recordKey]) => recordKey === key);
+    const score = day.analysis?.score;
+    cells.push(`<button type="button" data-record-date="${key}" class="${hasRecord ? "has-record" : ""}">
+      <strong>${date}</strong>${hasRecord ? `<i></i>` : ""}${score != null ? `<small>${escapeHtml(score)}</small>` : ""}
+    </button>`);
+  }
+  $("#calendarGrid").innerHTML = cells.join("");
+}
+function average(values) {
+  const numbers = values.map(Number).filter(value => Number.isFinite(value) && value > 0);
+  return numbers.length ? numbers.reduce((sum, value) => sum + value, 0) / numbers.length : 0;
+}
+function renderInsights() {
+  const records = recordedDays();
+  const days = records.map(([, day]) => day);
+  const avgSteps = average(days.map(day => String(day.stepsInput || "").replace(/,/g,"")));
+  const avgSleep = average(days.map(day => day.sleepInput));
+  const avgWater = average(days.map(day => day.waterInput));
+  const avgScore = average(days.map(day => day.analysis?.score));
+  $("#insightSummary").innerHTML = [
+    ["기록한 날", `${records.length}일`],
+    ["평균 걸음", avgSteps ? `${Math.round(avgSteps).toLocaleString()}걸음` : "기록 없음"],
+    ["평균 수면", avgSleep ? `${avgSleep.toFixed(1)}시간` : "기록 없음"],
+    ["평균 수분", avgWater ? `${avgWater.toFixed(1)}L` : "기록 없음"],
+    ["평균 건강점수", avgScore ? `${Math.round(avgScore)}점` : "분석 없음"]
+  ].map(([label,value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+  const recent = records.slice(0, 7);
+  $("#trendList").innerHTML = recent.length ? recent.map(([key, day]) =>
+    `<button type="button" data-record-date="${key}">
+      <time>${key.slice(5).replace("-","/")}</time>
+      <span>걸음 ${day.stepsInput || "-"} · 수면 ${day.sleepInput || "-"}h · 물 ${day.waterInput || "-"}L</span>
+      <strong>${day.analysis?.score != null ? `${day.analysis.score}점` : "미분석"}</strong>
+    </button>`
+  ).join("") : `<p class="feature-empty">기록이 쌓이면 최근 추세를 보여드려요.</p>`;
+}
+function renderRecords() {
+  const records = recordedDays();
+  $("#recordsList").innerHTML = records.length ? records.map(([key, day]) => {
+    const summary = day.entryText || day.analysis?.headline || "수치와 첨부 자료가 저장된 날입니다.";
+    return `<button type="button" data-record-date="${key}" data-record-page="${day.analysis ? 2 : 1}">
+      <time>${key}</time><strong>${escapeHtml(day.entryTitle || `${key.slice(5).replace("-","월 ")}일의 기록`)}</strong>
+      <p>${escapeHtml(summary.slice(0, 90))}</p>
+      <small>걸음 ${escapeHtml(day.stepsInput || "-")} · 수면 ${escapeHtml(day.sleepInput || "-")}h · 물 ${escapeHtml(day.waterInput || "-")}L${day.analysis?.score != null ? ` · ${escapeHtml(day.analysis.score)}점` : ""}</small>
+    </button>`;
+  }).join("") : `<p class="feature-empty">아직 저장된 일기가 없습니다.</p>`;
+}
+function openFeature(view) {
+  if (view === "calendar") {
+    renderCalendar();
+    $("#calendarDialog").showModal();
+  } else if (view === "insight") {
+    renderInsights();
+    $("#insightDialog").showModal();
+  } else if (view === "me") {
+    renderRecords();
+    $("#recordsDialog").showModal();
+  }
 }
 function renderCover() {
   const profile = state.profile || {};
@@ -1332,7 +1424,9 @@ $("#downloadProfile").onclick = () => {
 };
 $("#saveSettings").onclick = () => {
   state.settings.aiConnectionMode = "proxy";
+  state.settings.aiProvider = $("#aiProvider").value;
   state.settings.proxyAiApiKey = $("#proxyAiApiKey").value.trim();
+  state.settings.geminiApiKey = $("#geminiApiKey").value.trim();
   state.settings.apiEndpoint = localProxyUrl("/api/analyze");
   state.settings.appAccessCode = "";
   state.settings.weatherApiKey = $("#weatherApiKey").value.trim();
@@ -1340,7 +1434,8 @@ $("#saveSettings").onclick = () => {
   state.settings.customPrompt = $("#customPrompt").value.trim() || defaultPrompt;
   state.settings.profileExtractionPrompt = $("#profileExtractionPrompt").value.trim() || defaultProfileExtractionPrompt;
   state.settings.dailyImagePrompt = $("#dailyImagePrompt").value.trim() || defaultDailyImagePrompt;
-  persist(); $("#settingsDialog").close(); loadWeather(); toast("API 키와 분석 설정을 이 브라우저에 저장했어요");
+  persist(); $("#settingsDialog").close(); loadWeather();
+  toast(`${state.settings.aiProvider === "gemini" ? "Gemini" : "OpenAI"} 분석 설정을 저장했어요`);
 };
 $("#resetPrompt").onclick = () => {
   $("#customPrompt").value = defaultPrompt;
@@ -1364,8 +1459,17 @@ $("#extraRecords").addEventListener("click", event => {
 $$(".bottom-nav button[data-view]").forEach(btn => btn.onclick = () => {
   $$(".bottom-nav button").forEach(x => x.classList.remove("active")); btn.classList.add("active");
   if (btn.dataset.view === "diary") setPage(0);
-  else toast(`${btn.textContent.trim()} 화면은 다음 단계에서 연결됩니다`);
+  else openFeature(btn.dataset.view);
 });
+$$(".feature-close").forEach(button => button.onclick = () => button.closest("dialog").close());
+$("#calendarGrid").addEventListener("click", event => {
+  const button = event.target.closest("[data-record-date]");
+  if (button) openDateRecord(button.dataset.recordDate, 1);
+});
+["#trendList","#recordsList"].forEach(selector => $(selector).addEventListener("click", event => {
+  const button = event.target.closest("[data-record-date]");
+  if (button) openDateRecord(button.dataset.recordDate, Number(button.dataset.recordPage || 1));
+}));
 
 profileIds.forEach(id => $(`#${id}`).value = state.profile[id] || "");
 $("#profileFileList").innerHTML = (state.profile.files || []).map(f => `• ${escapeHtml(f)}`).join("<br>");
@@ -1374,6 +1478,8 @@ state.settings.apiEndpoint = localProxyUrl("/api/analyze");
 state.settings.weatherEndpoint = localProxyUrl("/api/weather");
 state.settings.appAccessCode = "";
 $("#proxyAiApiKey").value = state.settings.proxyAiApiKey || "";
+$("#geminiApiKey").value = state.settings.geminiApiKey || "";
+$("#aiProvider").value = state.settings.aiProvider || "openai";
 $("#weatherApiKey").value = state.settings.weatherApiKey || "";
 $("#customPrompt").value = state.settings.customPrompt || defaultPrompt;
 $("#profileExtractionPrompt").value = state.settings.profileExtractionPrompt || defaultProfileExtractionPrompt;
