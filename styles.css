@@ -298,6 +298,20 @@ textarea { height: 92px; resize: none; line-height: 1.6; }
 .trend-list time,.records-list time { color: var(--sage-dark); font-size: 9px; }.trend-list span { color: var(--muted); font-size: 9px; }.trend-list strong { font-size: 11px; }
 .records-list button { display: grid; gap: 5px; }.records-list button > strong { font-family: "Gaegu"; font-size: 17px; }
 .records-list p { margin: 0; color: #5f5d54; font-size: 10px; line-height: 1.5; }.records-list small { color: var(--muted); font-size: 8px; }
+.records-tools,.setting-tools { margin: 8px 0 14px; }
+.manual-panel { padding-bottom: 42px; }
+.manual-card { margin: 12px 0; padding: 13px 14px; border: 1px solid #ded5c4; border-radius: 13px; background: rgba(255,253,247,.68); box-shadow: inset 0 0 18px rgba(120,100,70,.035); }
+.manual-card h3 { margin: 0 0 8px; font-family: "Gaegu"; font-size: 19px; color: var(--sage-dark); }
+.manual-card p,.manual-card li { font-size: 10.5px; line-height: 1.7; color: #5f5d54; }
+.manual-card ol,.manual-card ul { margin: 0; padding-left: 18px; }
+.manual-note { margin: 9px 0 0; padding: 8px 10px; border-radius: 8px; background: #f1eadb; color: #7b6a55 !important; }
+.backup-card { border-left: 4px solid var(--sage); }
+.backup-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 11px 0; }
+.backup-actions .primary,.backup-actions .secondary { margin: 0; min-height: 42px; display: grid; place-items: center; text-align: center; font-size: 10px; }
+.file-restore-label { cursor: pointer; }
+.manual-list { margin-top: 10px !important; }
+.backup-status { margin-top: 10px; padding: 9px 10px; border-radius: 9px; background: #e9eddf; color: var(--sage-dark); font-size: 10px; line-height: 1.55; text-align: center; }
+.backup-status.error { background: #f0ded9; color: #845948; }
 .toast { position: fixed; z-index: 30; left: 50%; bottom: 100px; transform: translate(-50%, 20px); background: #394136; color: white; padding: 10px 16px; border-radius: 30px; font-size: 11px; opacity: 0; pointer-events: none; transition: .25s; white-space: nowrap; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .analyzing { animation: pulse 1s infinite alternate; }

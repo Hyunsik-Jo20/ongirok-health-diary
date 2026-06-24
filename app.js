@@ -715,6 +715,116 @@ function persist() {
     }
   }
 }
+function backupSafeState() {
+  saveDay();
+  if ($("#profileDialog")?.open) {
+    saveExtraRecordsFromUI();
+    profileIds.forEach(id => state.profile[id] = $(`#${id}`).value.trim());
+    state.profile.markdown = profileMarkdown();
+    state.profile.updatedAt = new Date().toISOString();
+  }
+  const backup = compactStateForStorage(state);
+  backup.exportedAt = new Date().toISOString();
+  backup.app = "ongirok-health-diary";
+  backup.version = 2;
+  backup.settings ||= {};
+  delete backup.settings.proxyAiApiKey;
+  delete backup.settings.geminiApiKey;
+  delete backup.settings.weatherApiKey;
+  delete backup.settings.aiApiKey;
+  delete backup.settings.appAccessCode;
+  return backup;
+}
+function downloadBackup() {
+  const backup = backupSafeState();
+  const stamp = new Date().toISOString().slice(0,10).replaceAll("-", "");
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:"application/json;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `ongirok-backup-${stamp}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  const status = $("#backupStatus");
+  if (status) {
+    status.classList.remove("error");
+    status.textContent = "백업 파일을 내려받았어요. 새 기기에서는 이 JSON 파일을 업로드하면 됩니다.";
+  }
+  toast("온기록 백업 파일을 만들었어요");
+}
+function restoreBackupData(raw) {
+  const incoming = JSON.parse(raw);
+  if (!incoming || incoming.app !== "ongirok-health-diary" || !incoming.days || !incoming.profile) {
+    throw new Error("온기록 백업 파일 형식이 아닙니다.");
+  }
+  const currentKeys = {
+    proxyAiApiKey: state.settings?.proxyAiApiKey || "",
+    geminiApiKey: state.settings?.geminiApiKey || "",
+    weatherApiKey: state.settings?.weatherApiKey || "",
+    aiProvider: state.settings?.aiProvider || incoming.settings?.aiProvider || "openai"
+  };
+  const restored = {
+    days: incoming.days || {},
+    profile: incoming.profile || {},
+    settings: {...(incoming.settings || {}), ...currentKeys},
+    currentDate: incoming.currentDate || new Date().toISOString()
+  };
+  Object.keys(state).forEach(key => delete state[key]);
+  Object.assign(state, restored);
+  state.days ||= {};
+  state.settings ||= {};
+  state.profile ||= {};
+  state.profile.additionalRecords = (state.profile.additionalRecords || []).map(normalizeExtraRecord);
+  state.settings.aiConnectionMode = "proxy";
+  state.settings.apiEndpoint = localProxyUrl("/api/analyze");
+  state.settings.weatherEndpoint = localProxyUrl("/api/weather");
+  state.settings.appAccessCode = "";
+  currentDate = new Date(state.currentDate);
+  if (Number.isNaN(currentDate.getTime())) currentDate = new Date();
+  volatileDayAttachments = [];
+  volatileProfileAttachments = [];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(compactStateForStorage(state)));
+}
+async function importBackupFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const status = $("#backupStatus");
+  try {
+    const text = await file.text();
+    restoreBackupData(text);
+    profileIds.forEach(id => $(`#${id}`).value = state.profile[id] || "");
+    $("#profileFileList").innerHTML = (state.profile.files || []).map(f => `📎 ${escapeHtml(f)}`).join("<br>");
+    $("#proxyAiApiKey").value = state.settings.proxyAiApiKey || "";
+    $("#geminiApiKey").value = state.settings.geminiApiKey || "";
+    $("#aiProvider").value = state.settings.aiProvider || "openai";
+    $("#weatherApiKey").value = state.settings.weatherApiKey || "";
+    const savedWeatherRegion = `${state.settings.weatherLocation || "서울"}|${state.settings.weatherNx || "60"}|${state.settings.weatherNy || "127"}`;
+    const matchingWeatherOption = $$("#weatherRegion option").some(option => option.value === savedWeatherRegion);
+    $("#weatherRegion").value = matchingWeatherOption ? savedWeatherRegion : (state.settings.weatherLocation === "현재 위치" ? "current" : "서울|60|127");
+    $("#weatherLocationStatus").textContent = `현재 설정: ${state.settings.weatherLocation || "서울"}`;
+    $("#customPrompt").value = state.settings.customPrompt || defaultPrompt;
+    $("#profileExtractionPrompt").value = state.settings.profileExtractionPrompt || defaultProfileExtractionPrompt;
+    $("#dailyImagePrompt").value = state.settings.dailyImagePrompt || defaultDailyImagePrompt;
+    renderExtraRecords();
+    renderCover();
+    renderDate();
+    loadDay();
+    setPage(0);
+    loadWeather();
+    if (status) {
+      status.classList.remove("error");
+      status.textContent = "복원이 완료됐어요. API 키는 보안상 백업에 없으니 설정창에서 다시 확인해 주세요.";
+    }
+    toast("백업 데이터를 복원했어요");
+  } catch (error) {
+    if (status) {
+      status.classList.add("error");
+      status.textContent = `복원 실패: ${error.message}`;
+    }
+    toast("백업 파일을 읽지 못했어요");
+  } finally {
+    event.target.value = "";
+  }
+}
 function saveDay() {
   const day = getDay();
   dayFields.forEach(id => day[id] = id === "entryText" ? $(`#${id}`).innerText.trim() : $(`#${id}`).value.trim());
@@ -876,6 +986,13 @@ async function loadWeather() {
 function toast(message) {
   const el = $("#toast"); el.textContent = message; el.classList.add("show");
   clearTimeout(window.toastTimer); window.toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+function openManual() {
+  ["#settingsDialog","#recordsDialog"].forEach(selector => {
+    const dialog = $(selector);
+    if (dialog?.open) dialog.close();
+  });
+  $("#manualDialog").showModal();
 }
 function setPage(index) {
   pageIndex = Math.max(0, Math.min(2, index));
@@ -1356,6 +1473,10 @@ $("#shareAppBtn").onclick = async () => {
 $("#settingsBtn").onclick = () => $("#settingsDialog").showModal();
 $("#writeBtn").onclick = () => { setPage(1); $("#entryText").focus(); };
 $("#analyzeBtn").onclick = analyze;
+$("#openManualFromSettings").onclick = openManual;
+$("#openManualFromRecords").onclick = openManual;
+$("#exportBackup").onclick = downloadBackup;
+$("#importBackup").onchange = importBackupFile;
 $("#missingDataList").addEventListener("click", event => {
   const button = event.target.closest("[data-missing-kind]");
   if (button) openMissingDataInput(button.dataset.missingKind);
