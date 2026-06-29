@@ -1,4 +1,4 @@
-const {json, authorize, extractOutputText, parseModelJson, requestBody} = require("./_shared");
+const {json, authorize, extractOutputText, parseModelJson, requestBody, enforceQuota, logUsage} = require("./_shared");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, {error:"POST 요청만 지원합니다."});
@@ -6,12 +6,16 @@ module.exports = async function handler(req, res) {
   const userApiKey = provider === "gemini"
     ? String(req.headers["x-gemini-key"] || "").trim()
     : String(req.headers["x-openai-key"] || "").trim();
-  if (!userApiKey && !authorize(req, res)) return;
-  const apiKey = userApiKey || (provider === "gemini" ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY);
-  if (!apiKey) return json(res, 503, {error:`${provider === "gemini" ? "Gemini" : "OpenAI"} API 키를 앱 설정창에 입력해 주세요.`});
 
   try {
     const body = requestBody(req);
+    const apiKey = userApiKey || (provider === "gemini" ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY);
+    if (!apiKey) return json(res, 503, {error:`${provider === "gemini" ? "Gemini" : "OpenAI"} API 키가 서버에 설정되지 않았습니다.`});
+
+    const quotaGate = userApiKey ? null : await enforceQuota(req, res, body);
+    if (!userApiKey && !quotaGate) return;
+    if (userApiKey && !authorize(req, res)) return;
+
     if (provider === "gemini") {
       const parts = [{
         text:JSON.stringify({
@@ -37,8 +41,10 @@ module.exports = async function handler(req, res) {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) return json(res, response.status, {error:result.error?.message || `Gemini API 요청 실패 (${response.status})`});
       const text = (result.candidates?.[0]?.content?.parts || []).map(part => part.text || "").join("\n");
+      if (quotaGate?.user) await logUsage(quotaGate.user.id, body.task || "analyze_daily_health", {provider, imageCount:(body.images || []).length});
       return json(res, 200, parseModelJson(text));
     }
+
     const content = [{
       type:"input_text",
       text:JSON.stringify({
@@ -71,6 +77,7 @@ module.exports = async function handler(req, res) {
         code:result.error?.code
       });
     }
+    if (quotaGate?.user) await logUsage(quotaGate.user.id, body.task || "analyze_daily_health", {provider, imageCount:(body.images || []).length});
     return json(res, 200, parseModelJson(extractOutputText(result)));
   } catch (error) {
     return json(res, 500, {error:error.message || "분석 서버 오류"});

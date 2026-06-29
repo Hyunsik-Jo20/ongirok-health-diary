@@ -125,6 +125,10 @@ let currentDate = state.currentDate ? new Date(state.currentDate) : new Date();
 let pageIndex = 0;
 let volatileDayAttachments = [];
 let volatileProfileAttachments = [];
+let appConfig = {authEnabled:false, limits:{dailyAiLimit:2, profileMonthlyLimit:1, maxImagesPerRequest:5, maxFileMb:8, maxPdfMb:5}};
+let supabaseClient = null;
+let authSession = null;
+let accountInfo = null;
 state.profile.additionalRecords ||= [];
 
 const profileIds = ["pName","pAge","pHeight","pWeight","pWaist","pSex","pHistory","pHospital","pCheckup","pMedication","pLifestyle","pConcerns","pNotes","pPledge"];
@@ -183,6 +187,31 @@ const compressImageAttachment = (file) => new Promise(resolve => {
 });
 const readUploadAttachment = file =>
   file.type.startsWith("image/") ? compressImageAttachment(file) : readAttachment(file);
+
+function validateUploadFiles(files, {profile = false} = {}) {
+  const maxImages = Number(appConfig.limits?.maxImagesPerRequest || 5);
+  const maxFileMb = Number(appConfig.limits?.maxFileMb || 8);
+  const maxPdfMb = Number(appConfig.limits?.maxPdfMb || 5);
+  const imageCount = files.filter(file => file.type.startsWith("image/")).length;
+  if (imageCount > maxImages) {
+    toast(`이미지는 한 번에 최대 ${maxImages}장까지 업로드할 수 있어요`);
+    return false;
+  }
+  const tooLarge = files.find(file => {
+    const limit = file.type === "application/pdf" || /\.pdf$/i.test(file.name) ? maxPdfMb : maxFileMb;
+    return file.size > limit * 1024 * 1024;
+  });
+  if (tooLarge) {
+    const limit = tooLarge.type === "application/pdf" || /\.pdf$/i.test(tooLarge.name) ? maxPdfMb : maxFileMb;
+    toast(`${tooLarge.name} 파일이 너무 커요. ${limit}MB 이하로 줄여 주세요`);
+    return false;
+  }
+  if (profile && files.length > 8) {
+    toast("기본 자료는 한 번에 최대 8개 파일까지 가져올 수 있어요");
+    return false;
+  }
+  return true;
+}
 
 const profileLabels = {
   pName: "이름/별명", pAge: "나이", pHeight: "키", pWeight: "체중", pWaist: "허리둘레",
@@ -541,9 +570,9 @@ function aiConfigured() {
   const mode = state.settings.aiConnectionMode || "proxy";
   const provider = state.settings.aiProvider || "openai";
   return mode === "proxy"
-    ? Boolean(state.settings.apiEndpoint && (
+    ? Boolean(state.settings.apiEndpoint && (appConfig.serverAiEnabled || authSession || (
         provider === "gemini" ? state.settings.geminiApiKey : state.settings.proxyAiApiKey
-      ))
+      )))
     : Boolean(state.settings.aiApiKey && state.settings.aiApiUrl && state.settings.aiModel);
 }
 function localProxyUrl(pathname) {
@@ -554,6 +583,7 @@ function proxyHeaders() {
   const provider = state.settings.aiProvider || "openai";
   headers["X-AI-Provider"] = provider;
   if (state.settings.appAccessCode) headers["X-App-Code"] = state.settings.appAccessCode;
+  if (authSession?.access_token) headers["Authorization"] = `Bearer ${authSession.access_token}`;
   if (provider === "gemini" && state.settings.geminiApiKey) headers["X-Gemini-Key"] = state.settings.geminiApiKey;
   if (provider === "openai" && state.settings.proxyAiApiKey) headers["X-OpenAI-Key"] = state.settings.proxyAiApiKey;
   return headers;
@@ -958,6 +988,7 @@ async function loadWeather() {
     const response = await fetch(url, {
       headers: {
         ...(state.settings.appAccessCode ? {"X-App-Code":state.settings.appAccessCode} : {}),
+        ...(authSession?.access_token ? {"Authorization":`Bearer ${authSession.access_token}`} : {}),
         ...(state.settings.weatherApiKey ? {"X-Weather-Key":state.settings.weatherApiKey} : {})
       }
     });
@@ -993,6 +1024,133 @@ function openManual() {
     if (dialog?.open) dialog.close();
   });
   $("#manualDialog").showModal();
+}
+async function apiFetch(path, options = {}) {
+  const headers = {...(options.headers || {})};
+  if (authSession?.access_token) headers.Authorization = `Bearer ${authSession.access_token}`;
+  if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  const response = await fetch(path, {...options, headers});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `${path} ${response.status}`);
+  return data;
+}
+function renderAccount() {
+  const boxes = ["#accountSummary", "#authState"].map(selector => $(selector)).filter(Boolean);
+  const profile = accountInfo?.profile;
+  const usage = accountInfo?.usage;
+  const className = profile?.status || "";
+  const text = !appConfig.authEnabled
+    ? "서버 로그인 설정 전입니다. Supabase 환경변수를 연결하면 승인제가 활성화됩니다."
+    : !authSession
+      ? "로그인 전입니다. 서버 AI 분석을 쓰려면 이메일 매직링크로 로그인해 주세요."
+      : profile?.status === "approved" || profile?.role === "admin"
+        ? `${profile.role === "admin" ? "관리자" : "승인 사용자"} · ${accountInfo.user.email} · 오늘 분석 ${usage?.todayAiUsed ?? 0}/${usage?.dailyLimit ?? 2}회 · 기본자료 이번 달 ${usage?.monthProfileUsed ?? 0}/${usage?.profileMonthlyLimit ?? 1}회`
+        : profile?.status === "blocked"
+          ? `${accountInfo.user.email} · 차단된 계정입니다. 서버 AI 기능을 사용할 수 없습니다.`
+          : `${accountInfo?.user?.email || "로그인됨"} · 승인 대기 중입니다. 승인 전에는 일기 작성과 백업만 사용할 수 있어요.`;
+  boxes.forEach(box => {
+    box.className = `account-summary ${className}`;
+    box.textContent = text;
+  });
+  $$(".admin-only").forEach(el => el.hidden = !(profile?.role === "admin"));
+  const signOutButton = $("#signOut");
+  if (signOutButton) signOutButton.hidden = !authSession;
+}
+async function refreshAccount() {
+  if (!appConfig.authEnabled || !authSession) {
+    accountInfo = null;
+    renderAccount();
+    return;
+  }
+  try {
+    accountInfo = await apiFetch("/api/me");
+    if ($("#authName") && accountInfo.profile?.display_name) $("#authName").value = accountInfo.profile.display_name;
+    if ($("#authPurpose") && accountInfo.profile?.purpose) $("#authPurpose").value = accountInfo.profile.purpose;
+  } catch (error) {
+    accountInfo = null;
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary error";
+      authState.textContent = error.message;
+    }
+  }
+  renderAccount();
+}
+async function initAuth() {
+  try {
+    appConfig = await apiFetch("/api/config");
+  } catch {
+    appConfig = {authEnabled:false, limits:{dailyAiLimit:2, profileMonthlyLimit:1, maxImagesPerRequest:5, maxFileMb:8, maxPdfMb:5}};
+  }
+  if (!appConfig.authEnabled || !window.supabase) {
+    renderAccount();
+    return;
+  }
+  supabaseClient = window.supabase.createClient(appConfig.supabaseUrl, appConfig.supabaseAnonKey);
+  const {data} = await supabaseClient.auth.getSession();
+  authSession = data.session;
+  if (authSession?.user?.email && $("#authEmail")) $("#authEmail").value = authSession.user.email;
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    authSession = session;
+    await refreshAccount();
+    loadWeather();
+  });
+  await refreshAccount();
+}
+async function sendMagicLink() {
+  if (!appConfig.authEnabled || !supabaseClient) return toast("Supabase 로그인이 아직 설정되지 않았어요");
+  const email = $("#authEmail").value.trim();
+  if (!email) return toast("이메일을 입력해 주세요");
+  const displayName = $("#authName").value.trim();
+  const purpose = $("#authPurpose").value.trim();
+  const {error} = await supabaseClient.auth.signInWithOtp({
+    email,
+    options:{
+      emailRedirectTo:window.location.origin,
+      data:{display_name:displayName, purpose}
+    }
+  });
+  if (error) return toast(error.message);
+  toast("이메일로 매직링크를 보냈어요");
+}
+async function signOutAccount() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  authSession = null;
+  accountInfo = null;
+  renderAccount();
+  toast("로그아웃했어요");
+}
+async function loadAdminUsers() {
+  const container = $("#adminUsers");
+  container.innerHTML = `<p class="feature-empty">사용자 목록을 불러오는 중…</p>`;
+  try {
+    const {users} = await apiFetch("/api/admin-users");
+    container.innerHTML = users.length ? users.map(user => `
+      <article class="admin-user-card">
+        <header>
+          <div><strong>${escapeHtml(user.display_name || user.email || "이름 없음")}</strong><small>${escapeHtml(user.email || "")}<br>${escapeHtml(user.purpose || "사용 목적 미입력")}</small></div>
+          <span class="admin-badge ${escapeHtml(user.status)}">${escapeHtml(user.role)} · ${escapeHtml(user.status)}</span>
+        </header>
+        <div class="usage-line">오늘 분석 ${user.today_ai_used || 0}/${user.daily_limit || 2}회 · 기본자료 이번 달 ${user.month_profile_used || 0}/${user.profile_monthly_limit || 1}회</div>
+        <div class="admin-actions">
+          <button type="button" data-admin-action="approve" data-user-id="${escapeHtml(user.id)}">승인</button>
+          <button type="button" data-admin-action="pending" data-user-id="${escapeHtml(user.id)}">대기</button>
+          <button type="button" data-admin-action="block" data-user-id="${escapeHtml(user.id)}">차단</button>
+        </div>
+      </article>
+    `).join("") : `<p class="feature-empty">사용자가 아직 없습니다.</p>`;
+  } catch (error) {
+    container.innerHTML = `<p class="feature-empty">${escapeHtml(error.message)}</p>`;
+  }
+}
+async function updateAdminUser(userId, action) {
+  const status = action === "approve" ? "approved" : action === "block" ? "blocked" : "pending";
+  await apiFetch("/api/admin-update-user", {
+    method:"POST",
+    body:JSON.stringify({userId, status})
+  });
+  toast("사용자 상태를 변경했어요");
+  await loadAdminUsers();
 }
 function setPage(index) {
   pageIndex = Math.max(0, Math.min(2, index));
@@ -1397,7 +1555,7 @@ async function analyze() {
   saveDay(); setPage(2);
   const btn = $("#analyzeBtn"); btn.disabled = true; btn.textContent = "자료를 연결해 꼼꼼히 읽는 중…";
   try {
-    if (dateKey() === todayKey() && state.settings.weatherApiKey) {
+    if (dateKey() === todayKey() && (state.settings.weatherApiKey || appConfig.serverWeatherEnabled)) {
       btn.textContent = "오늘 날씨를 확인하는 중…";
       await loadWeather();
       saveDay();
@@ -1475,6 +1633,16 @@ $("#writeBtn").onclick = () => { setPage(1); $("#entryText").focus(); };
 $("#analyzeBtn").onclick = analyze;
 $("#openManualFromSettings").onclick = openManual;
 $("#openManualFromRecords").onclick = openManual;
+$("#openAuth").onclick = () => { $("#recordsDialog").close(); $("#authDialog").showModal(); refreshAccount(); };
+$("#sendMagicLink").onclick = sendMagicLink;
+$("#refreshAccount").onclick = refreshAccount;
+$("#signOut").onclick = signOutAccount;
+$("#openAdmin").onclick = () => { $("#recordsDialog").close(); $("#adminDialog").showModal(); loadAdminUsers(); };
+$("#refreshAdminUsers").onclick = loadAdminUsers;
+$("#adminUsers").addEventListener("click", event => {
+  const button = event.target.closest("[data-admin-action]");
+  if (button) updateAdminUser(button.dataset.userId, button.dataset.adminAction).catch(error => toast(error.message));
+});
 $("#exportBackup").onclick = downloadBackup;
 $("#importBackup").onchange = importBackupFile;
 $("#missingDataList").addEventListener("click", event => {
@@ -1485,6 +1653,7 @@ $("#missingDataList").addEventListener("click", event => {
 async function importDailyFiles(e) {
   const files = [...e.target.files];
   if (!files.length) return;
+  if (!validateUploadFiles(files)) { e.target.value = ""; return; }
   toast(`${files.length}개 자료를 읽고 있어요`);
   const newAttachments = await Promise.all(files.map(readUploadAttachment));
   const existing = volatileDayAttachments.length ? volatileDayAttachments : (getDay().attachments || []);
@@ -1515,6 +1684,7 @@ $("#dailyFiles").onchange = importDailyFiles;
 async function importProfileFiles(e) {
   const files = [...e.target.files];
   if (!files.length) return;
+  if (!validateUploadFiles(files, {profile:true})) { e.target.value = ""; return; }
   state.profile.files = files.map(f => f.name);
   volatileProfileAttachments = await Promise.all(files.map(readUploadAttachment));
   state.profile.attachments = volatileProfileAttachments;
@@ -1671,6 +1841,7 @@ $("#dailyImagePrompt").value = state.settings.dailyImagePrompt || defaultDailyIm
 state.profile.additionalRecords = (state.profile.additionalRecords || []).map(normalizeExtraRecord);
 renderExtraRecords();
 renderCover(); renderDate(); loadDay(); setPage(0); loadWeather();
+initAuth().then(() => loadWeather()).catch(error => console.warn("계정 초기화 실패", error));
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("/service-worker.js").catch(error => console.warn("서비스 워커 등록 실패", error));
 }

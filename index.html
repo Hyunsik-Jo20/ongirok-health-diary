@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260624-25">
+  <link rel="stylesheet" href="styles.css?v=20260629-26">
 </head>
 <body>
 <main class="phone-shell">
@@ -168,10 +168,39 @@
   <div class="feature-panel">
     <div class="sheet-handle"></div><button class="close feature-close" type="button">×</button>
     <span class="eyebrow">MY HEALTH RECORDS</span><h2>나의 기록</h2>
+    <div id="accountSummary" class="account-summary"></div>
     <div class="records-tools">
       <button type="button" class="secondary" id="openManualFromRecords">사용법·백업 안내</button>
+      <button type="button" class="secondary" id="openAuth">로그인·승인 상태</button>
+      <button type="button" class="secondary admin-only" id="openAdmin" hidden>관리자 패널</button>
     </div>
     <div id="recordsList" class="records-list"></div>
+  </div>
+</dialog>
+
+<dialog id="authDialog" class="sheet tall-sheet feature-sheet">
+  <div class="feature-panel">
+    <div class="sheet-handle"></div><button class="close feature-close" type="button">×</button>
+    <span class="eyebrow">ONGIROK ACCOUNT</span><h2>이메일 로그인</h2>
+    <div id="authState" class="account-summary">로그인 상태를 확인하고 있어요.</div>
+    <div class="auth-form">
+      <label class="field">이메일<input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
+      <label class="field">이름/별명<input id="authName" autocomplete="name" placeholder="온기록에서 보일 이름"></label>
+      <label class="field">사용 목적<textarea id="authPurpose" placeholder="예: 개인 건강관리, 가족 건강 기록, 베타테스트"></textarea></label>
+      <button type="button" class="primary" id="sendMagicLink">매직링크 보내기</button>
+      <button type="button" class="secondary" id="refreshAccount">승인 상태 새로고침</button>
+      <button type="button" class="secondary" id="signOut" hidden>로그아웃</button>
+      <p class="setting-help">매직링크로 로그인한 뒤 관리자가 승인하면 서버 AI 분석을 사용할 수 있습니다. 승인 전에도 일기 작성·백업은 가능합니다.</p>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="adminDialog" class="sheet tall-sheet feature-sheet">
+  <div class="feature-panel">
+    <div class="sheet-handle"></div><button class="close feature-close" type="button">×</button>
+    <span class="eyebrow">ADMIN PANEL</span><h2>사용자 승인 관리</h2>
+    <button type="button" class="secondary" id="refreshAdminUsers">사용자 목록 새로고침</button>
+    <div id="adminUsers" class="admin-users"><p class="feature-empty">관리자만 볼 수 있습니다.</p></div>
   </div>
 </dialog>
 
@@ -329,6 +358,7 @@
 </dialog>
 
 <div class="toast" id="toast"></div>
-<script src="app.js?v=20260624-25"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js?v=20260629-26"></script>
 </body>
 </html>

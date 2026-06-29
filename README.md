@@ -76,3 +76,39 @@ APP_ACCESS_CODE=공유할_앱_접근코드
 배포된 앱의 설정창에서 사용자가 자신의 OpenAI 키와 공공데이터포털 키를 입력할 수 있습니다. 키는 해당 스마트폰의 브라우저 저장소에만 보관되며, Vercel 함수는 요청을 중계할 때만 키를 사용하고 서버나 데이터베이스에 저장하지 않습니다.
 
 브라우저 데이터 삭제·시크릿 모드·기기 변경 시 키를 다시 입력해야 하며, 공용 기기에서는 개인 키를 저장하지 않는 것을 권장합니다.
+## Supabase 로그인·승인제 운영
+
+서버 키를 사용해 앱을 공유하려면 Supabase SQL Editor에서 `supabase-schema.sql`을 먼저 실행합니다.
+
+Vercel 환경변수에 다음 값을 추가합니다.
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+OPENAI_API_KEY=your-openai-key
+GEMINI_API_KEY=your-gemini-key
+WEATHER_API_KEY=your-public-data-key
+WEATHER_API_URL=https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst
+DAILY_AI_LIMIT=2
+PROFILE_MONTHLY_LIMIT=1
+MAX_IMAGES_PER_REQUEST=5
+MAX_UPLOAD_FILE_MB=8
+MAX_UPLOAD_PDF_MB=5
+```
+
+최초 관리자 계정은 가입 후 Supabase SQL Editor에서 한 번 지정합니다.
+
+```sql
+update public.profiles
+set role = 'admin', status = 'approved', approved_at = now()
+where email = '당신의이메일@example.com';
+```
+
+운영 정책:
+
+- 사용자는 이메일 매직링크로 로그인합니다.
+- 가입 직후 상태는 `pending`입니다.
+- 관리자가 앱의 `나의 기록 → 관리자 패널`에서 승인해야 서버 AI를 사용할 수 있습니다.
+- 기본 자료 AI 등록은 월 1회, 하루 일반 분석은 2회, 이미지는 요청당 최대 5장으로 제한됩니다.
+- API 키는 Vercel 환경변수에만 저장하고 브라우저·GitHub·응답·로그에 노출하지 않습니다.

@@ -1,12 +1,17 @@
-const {json, authorize} = require("./_shared");
+const {json, authorize, requireApprovedUser, supabaseConfigured} = require("./_shared");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "GET") return json(res, 405, {error:"GET 요청만 지원합니다."});
   const userApiKey = String(req.headers["x-weather-key"] || "").trim();
-  if (!userApiKey && !authorize(req, res)) return;
+  if (!userApiKey && supabaseConfigured()) {
+    const gate = await requireApprovedUser(req, res);
+    if (!gate) return;
+  } else if (!userApiKey && !authorize(req, res)) {
+    return;
+  }
   const apiKey = userApiKey || process.env.WEATHER_API_KEY;
   if (!apiKey || !process.env.WEATHER_API_URL) {
-    return json(res, 503, {error:"공공데이터포털 API 키를 앱 설정창에 입력해 주세요."});
+    return json(res, 503, {error:"공공데이터포털 API 키가 서버에 설정되지 않았습니다."});
   }
 
   try {
