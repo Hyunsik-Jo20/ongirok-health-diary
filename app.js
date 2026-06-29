@@ -1025,6 +1025,16 @@ function openManual() {
   });
   $("#manualDialog").showModal();
 }
+function openAuthDialog() {
+  ["#settingsDialog","#recordsDialog"].forEach(selector => {
+    const dialog = $(selector);
+    if (dialog?.open) dialog.close();
+  });
+  const dialog = $("#authDialog");
+  if (!dialog) return toast("로그인 창을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요");
+  dialog.showModal();
+  refreshAccount();
+}
 async function apiFetch(path, options = {}) {
   const headers = {...(options.headers || {})};
   if (authSession?.access_token) headers.Authorization = `Bearer ${authSession.access_token}`;
@@ -1098,20 +1108,38 @@ async function initAuth() {
   await refreshAccount();
 }
 async function sendMagicLink() {
-  if (!appConfig.authEnabled || !supabaseClient) return toast("Supabase 로그인이 아직 설정되지 않았어요");
-  const email = $("#authEmail").value.trim();
-  if (!email) return toast("이메일을 입력해 주세요");
-  const displayName = $("#authName").value.trim();
-  const purpose = $("#authPurpose").value.trim();
-  const {error} = await supabaseClient.auth.signInWithOtp({
-    email,
-    options:{
-      emailRedirectTo:window.location.origin,
-      data:{display_name:displayName, purpose}
+  const button = $("#sendMagicLink");
+  try {
+    if (!appConfig.authEnabled || !supabaseClient) return toast("Supabase 로그인이 아직 설정되지 않았어요");
+    const email = $("#authEmail").value.trim();
+    if (!email) return toast("이메일을 입력해 주세요");
+    const displayName = $("#authName").value.trim();
+    const purpose = $("#authPurpose").value.trim();
+    if (button) { button.disabled = true; button.textContent = "매직링크 보내는 중…"; }
+    const {error} = await supabaseClient.auth.signInWithOtp({
+      email,
+      options:{
+        emailRedirectTo:window.location.origin,
+        data:{display_name:displayName, purpose}
+      }
+    });
+    if (error) throw error;
+    toast("이메일로 매직링크를 보냈어요");
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary pending";
+      authState.textContent = `${email}로 매직링크를 보냈어요. 메일함에서 링크를 눌러 로그인해 주세요.`;
     }
-  });
-  if (error) return toast(error.message);
-  toast("이메일로 매직링크를 보냈어요");
+  } catch (error) {
+    toast(error.message || "매직링크 전송에 실패했어요");
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary error";
+      authState.textContent = `매직링크 전송 실패: ${error.message || "알 수 없는 오류"}`;
+    }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "매직링크 보내기"; }
+  }
 }
 async function signOutAccount() {
   if (supabaseClient) await supabaseClient.auth.signOut();
@@ -1631,15 +1659,17 @@ $("#shareAppBtn").onclick = async () => {
 $("#settingsBtn").onclick = () => $("#settingsDialog").showModal();
 $("#writeBtn").onclick = () => { setPage(1); $("#entryText").focus(); };
 $("#analyzeBtn").onclick = analyze;
-$("#openManualFromSettings").onclick = openManual;
-$("#openManualFromRecords").onclick = openManual;
-$("#openAuth").onclick = () => { $("#recordsDialog").close(); $("#authDialog").showModal(); refreshAccount(); };
-$("#sendMagicLink").onclick = sendMagicLink;
-$("#refreshAccount").onclick = refreshAccount;
-$("#signOut").onclick = signOutAccount;
-$("#openAdmin").onclick = () => { $("#recordsDialog").close(); $("#adminDialog").showModal(); loadAdminUsers(); };
-$("#refreshAdminUsers").onclick = loadAdminUsers;
-$("#adminUsers").addEventListener("click", event => {
+if ($("#openManualFromSettings")) $("#openManualFromSettings").onclick = openManual;
+if ($("#openManualFromRecords")) $("#openManualFromRecords").onclick = openManual;
+if ($("#coverAuthBtn")) $("#coverAuthBtn").onclick = openAuthDialog;
+if ($("#openAuthFromSettings")) $("#openAuthFromSettings").onclick = openAuthDialog;
+if ($("#openAuth")) $("#openAuth").onclick = openAuthDialog;
+if ($("#sendMagicLink")) $("#sendMagicLink").onclick = sendMagicLink;
+if ($("#refreshAccount")) $("#refreshAccount").onclick = refreshAccount;
+if ($("#signOut")) $("#signOut").onclick = signOutAccount;
+if ($("#openAdmin")) $("#openAdmin").onclick = () => { $("#recordsDialog").close(); $("#adminDialog").showModal(); loadAdminUsers(); };
+if ($("#refreshAdminUsers")) $("#refreshAdminUsers").onclick = loadAdminUsers;
+if ($("#adminUsers")) $("#adminUsers").addEventListener("click", event => {
   const button = event.target.closest("[data-admin-action]");
   if (button) updateAdminUser(button.dataset.userId, button.dataset.adminAction).catch(error => toast(error.message));
 });
