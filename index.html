@@ -190,6 +190,11 @@
       <label class="field">사용 목적<textarea id="authPurpose" placeholder="예: 개인 건강관리, 가족 건강 기록, 베타테스트"></textarea></label>
       <button type="button" class="primary" id="sendMagicLink">매직링크 보내기</button>
       <button type="button" class="secondary" id="refreshAccount">승인 상태 새로고침</button>
+      <div class="backup-actions">
+        <button type="button" class="secondary" id="saveCloudSnapshot">클라우드 백업</button>
+        <button type="button" class="secondary" id="loadCloudSnapshot">클라우드 불러오기</button>
+      </div>
+      <div id="cloudSyncStatus" class="backup-status">로그인 후 클라우드 백업을 사용할 수 있습니다.</div>
       <button type="button" class="secondary" id="signOut" hidden>로그아웃</button>
       <p class="setting-help">매직링크로 로그인한 뒤 관리자가 승인하면 서버 AI 분석을 사용할 수 있습니다. 승인 전에도 일기 작성·백업은 가능합니다.</p>
     </div>
@@ -361,6 +366,6 @@
 
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260629-27"></script>
+<script src="app.js?v=20260629-28"></script>
 </body>
 </html>

@@ -129,6 +129,9 @@ let appConfig = {authEnabled:false, limits:{dailyAiLimit:2, profileMonthlyLimit:
 let supabaseClient = null;
 let authSession = null;
 let accountInfo = null;
+let cloudSyncTimer = null;
+let applyingCloudSnapshot = false;
+let cloudSyncBusy = false;
 state.profile.additionalRecords ||= [];
 
 const profileIds = ["pName","pAge","pHeight","pWeight","pWaist","pSex","pHistory","pHospital","pCheckup","pMedication","pLifestyle","pConcerns","pNotes","pPledge"];
@@ -172,13 +175,22 @@ const compressImageAttachment = (file) => new Promise(resolve => {
       canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
       canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
       const content = canvas.toDataURL("image/jpeg", 0.78);
+      const thumbMaxSide = 320;
+      const thumbScale = Math.min(1, thumbMaxSide / Math.max(image.naturalWidth, image.naturalHeight));
+      const thumbCanvas = document.createElement("canvas");
+      thumbCanvas.width = Math.max(1, Math.round(image.naturalWidth * thumbScale));
+      thumbCanvas.height = Math.max(1, Math.round(image.naturalHeight * thumbScale));
+      thumbCanvas.getContext("2d").drawImage(image, 0, 0, thumbCanvas.width, thumbCanvas.height);
+      const thumbnailDataUrl = thumbCanvas.toDataURL("image/jpeg", 0.62);
       resolve({
         name:file.name.replace(/\.[^.]+$/, "") + ".jpg",
         type:"image/jpeg",
         size:Math.round(content.length * 0.75),
         originalSize:file.size,
         encoding:"data-url",
-        content
+        content,
+        thumbnailDataUrl,
+        thumbnailStored:true
       });
     };
     image.src = reader.result;
@@ -717,7 +729,7 @@ async function extractProfileWithAI(attachments) {
 
 function compactAttachment(attachment = {}) {
   const {content, ...metadata} = attachment;
-  return {...metadata, contentStored:false};
+  return {...metadata, contentStored:false, thumbnailStored:Boolean(metadata.thumbnailDataUrl)};
 }
 function compactStateForStorage(source) {
   const saved = JSON.parse(JSON.stringify(source));
@@ -727,10 +739,34 @@ function compactStateForStorage(source) {
   });
   return saved;
 }
+function portableStateSnapshot() {
+  const snapshot = compactStateForStorage(state);
+  snapshot.app = "ongirok-health-diary";
+  snapshot.version = 3;
+  snapshot.updatedAt = state.updatedAt || new Date().toISOString();
+  snapshot.settings ||= {};
+  delete snapshot.settings.proxyAiApiKey;
+  delete snapshot.settings.geminiApiKey;
+  delete snapshot.settings.weatherApiKey;
+  delete snapshot.settings.aiApiKey;
+  delete snapshot.settings.appAccessCode;
+  return snapshot;
+}
+function hasUserContent(source = state) {
+  const profile = source.profile || {};
+  const hasProfile = profileIds.some(id => String(profile[id] || "").trim()) || (profile.additionalRecords || []).length;
+  const hasDay = Object.values(source.days || {}).some(day => day && (
+    day.entryTitle || day.entryText || day.dailyPledge || day.stepsInput || day.sleepInput ||
+    day.waterInput || day.analysis || day.extractedImageData || (day.attachments || []).length
+  ));
+  return hasProfile || hasDay;
+}
 function persist() {
   state.currentDate = currentDate.toISOString();
+  if (!applyingCloudSnapshot) state.updatedAt = new Date().toISOString();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(compactStateForStorage(state)));
+    if (!applyingCloudSnapshot) scheduleCloudSync();
     return true;
   } catch (error) {
     try {
@@ -738,6 +774,7 @@ function persist() {
       essential.profile.attachments = [];
       Object.values(essential.days || {}).forEach(day => { day.attachments = []; });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(essential));
+      if (!applyingCloudSnapshot) scheduleCloudSync();
       return true;
     } catch {
       console.error("온기록 저장 실패", error);
@@ -753,16 +790,8 @@ function backupSafeState() {
     state.profile.markdown = profileMarkdown();
     state.profile.updatedAt = new Date().toISOString();
   }
-  const backup = compactStateForStorage(state);
+  const backup = portableStateSnapshot();
   backup.exportedAt = new Date().toISOString();
-  backup.app = "ongirok-health-diary";
-  backup.version = 2;
-  backup.settings ||= {};
-  delete backup.settings.proxyAiApiKey;
-  delete backup.settings.geminiApiKey;
-  delete backup.settings.weatherApiKey;
-  delete backup.settings.aiApiKey;
-  delete backup.settings.appAccessCode;
   return backup;
 }
 function downloadBackup() {
@@ -781,8 +810,7 @@ function downloadBackup() {
   }
   toast("온기록 백업 파일을 만들었어요");
 }
-function restoreBackupData(raw) {
-  const incoming = JSON.parse(raw);
+function applySnapshotData(incoming) {
   if (!incoming || incoming.app !== "ongirok-health-diary" || !incoming.days || !incoming.profile) {
     throw new Error("온기록 백업 파일 형식이 아닙니다.");
   }
@@ -796,7 +824,8 @@ function restoreBackupData(raw) {
     days: incoming.days || {},
     profile: incoming.profile || {},
     settings: {...(incoming.settings || {}), ...currentKeys},
-    currentDate: incoming.currentDate || new Date().toISOString()
+    currentDate: incoming.currentDate || new Date().toISOString(),
+    updatedAt: incoming.updatedAt || incoming.exportedAt || new Date().toISOString()
   };
   Object.keys(state).forEach(key => delete state[key]);
   Object.assign(state, restored);
@@ -813,6 +842,9 @@ function restoreBackupData(raw) {
   volatileDayAttachments = [];
   volatileProfileAttachments = [];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(compactStateForStorage(state)));
+}
+function restoreBackupData(raw) {
+  applySnapshotData(JSON.parse(raw));
 }
 async function importBackupFile(event) {
   const file = event.target.files?.[0];
@@ -877,8 +909,26 @@ function loadDay() {
   });
   $("#moodText").textContent = day.mood || "가뿐해요";
   $("#moodEmoji").textContent = day.emoji || "🌿";
+  renderAttachmentThumbnails();
   renderAttachmentStatus();
   renderReport(day.analysis);
+}
+function renderAttachmentThumbnails() {
+  const collage = $("#collage");
+  if (!collage) return;
+  collage.querySelectorAll(".photo-card.restored-card").forEach(card => card.remove());
+  const images = (getDay().attachments || [])
+    .filter(a => String(a.type || "").startsWith("image/") && (a.thumbnailDataUrl || a.content))
+    .slice(0, 4);
+  if (!images.length) return;
+  $$(".default-card").forEach(x => x.remove());
+  images.forEach((attachment, i) => {
+    const fig = document.createElement("figure");
+    fig.className = "photo-card restored-card";
+    fig.style.cssText = `top:${8+(i%2)*24}px;left:${8+(i%2)*145}px;transform:rotate(${i%2?5:-6}deg);z-index:${i+1}`;
+    fig.innerHTML = `<img src="${attachment.thumbnailDataUrl || attachment.content}" alt=""><figcaption>${escapeHtml(String(attachment.name || "첨부 이미지").replace(/\.[^.]+$/,""))}</figcaption>`;
+    collage.append(fig);
+  });
 }
 function renderAttachmentStatus() {
   const day = getDay();
@@ -1044,6 +1094,77 @@ async function apiFetch(path, options = {}) {
   if (!response.ok) throw new Error(data.error || `${path} ${response.status}`);
   return data;
 }
+function canCloudSync() {
+  const profile = accountInfo?.profile;
+  return Boolean(authSession && (profile?.status === "approved" || profile?.role === "admin"));
+}
+function renderCloudStatus(message, kind = "") {
+  const el = $("#cloudSyncStatus");
+  if (!el) return;
+  el.className = `backup-status ${kind}`;
+  el.textContent = message;
+}
+function scheduleCloudSync() {
+  if (applyingCloudSnapshot || cloudSyncBusy || !canCloudSync()) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => uploadCloudSnapshot({silent:true}), 2500);
+}
+async function uploadCloudSnapshot({silent = false} = {}) {
+  if (!canCloudSync() || cloudSyncBusy) return;
+  cloudSyncBusy = true;
+  try {
+    const snapshot = portableStateSnapshot();
+    await apiFetch("/api/sync", {
+      method:"POST",
+      body:JSON.stringify({data:snapshot, updatedAt:snapshot.updatedAt})
+    });
+    if (!silent) toast("클라우드에 백업했어요");
+    renderCloudStatus(`클라우드 백업 완료 · ${new Date(snapshot.updatedAt).toLocaleString()}`);
+  } catch (error) {
+    if (!silent) toast(error.message || "클라우드 백업 실패");
+    renderCloudStatus(`클라우드 백업 실패: ${error.message}`, "error");
+  } finally {
+    cloudSyncBusy = false;
+  }
+}
+async function loadCloudSnapshot({manual = false} = {}) {
+  if (!authSession) return;
+  try {
+    const result = await apiFetch("/api/sync");
+    const snapshot = result.snapshot;
+    if (!snapshot?.data) {
+      if (manual) toast("클라우드에 저장된 기록이 아직 없어요");
+      renderCloudStatus("클라우드에 저장된 기록이 아직 없습니다.");
+      if (hasUserContent()) await uploadCloudSnapshot({silent:true});
+      return;
+    }
+    const cloudData = snapshot.data;
+    const cloudTime = new Date(snapshot.updated_at || cloudData.updatedAt || 0).getTime();
+    const localTime = new Date(state.updatedAt || 0).getTime();
+    const shouldRestore = manual || !hasUserContent() || cloudTime > localTime + 2000;
+    if (shouldRestore) {
+      applyingCloudSnapshot = true;
+      applySnapshotData(cloudData);
+      profileIds.forEach(id => $(`#${id}`).value = state.profile[id] || "");
+      renderExtraRecords();
+      renderCover();
+      renderDate();
+      loadDay();
+      setPage(0);
+      applyingCloudSnapshot = false;
+      toast("클라우드 기록을 불러왔어요");
+      renderCloudStatus(`클라우드 기록 불러오기 완료 · ${new Date(cloudTime).toLocaleString()}`);
+    } else if (localTime > cloudTime + 2000) {
+      await uploadCloudSnapshot({silent:true});
+    } else {
+      renderCloudStatus(`클라우드와 이 기기의 기록이 최신입니다 · ${new Date(cloudTime).toLocaleString()}`);
+    }
+  } catch (error) {
+    applyingCloudSnapshot = false;
+    if (manual) toast(error.message || "클라우드 불러오기 실패");
+    renderCloudStatus(`클라우드 불러오기 실패: ${error.message}`, "error");
+  }
+}
 function renderAccount() {
   const boxes = ["#accountSummary", "#authState"].map(selector => $(selector)).filter(Boolean);
   const profile = accountInfo?.profile;
@@ -1103,9 +1224,11 @@ async function initAuth() {
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
     authSession = session;
     await refreshAccount();
+    await loadCloudSnapshot();
     loadWeather();
   });
   await refreshAccount();
+  await loadCloudSnapshot();
 }
 async function sendMagicLink() {
   const button = $("#sendMagicLink");
@@ -1666,6 +1789,8 @@ if ($("#openAuthFromSettings")) $("#openAuthFromSettings").onclick = openAuthDia
 if ($("#openAuth")) $("#openAuth").onclick = openAuthDialog;
 if ($("#sendMagicLink")) $("#sendMagicLink").onclick = sendMagicLink;
 if ($("#refreshAccount")) $("#refreshAccount").onclick = refreshAccount;
+if ($("#saveCloudSnapshot")) $("#saveCloudSnapshot").onclick = () => uploadCloudSnapshot({silent:false});
+if ($("#loadCloudSnapshot")) $("#loadCloudSnapshot").onclick = () => loadCloudSnapshot({manual:true});
 if ($("#signOut")) $("#signOut").onclick = signOutAccount;
 if ($("#openAdmin")) $("#openAdmin").onclick = () => { $("#recordsDialog").close(); $("#adminDialog").showModal(); loadAdminUsers(); };
 if ($("#refreshAdminUsers")) $("#refreshAdminUsers").onclick = loadAdminUsers;

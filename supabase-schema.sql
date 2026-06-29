@@ -23,11 +23,18 @@ create table if not exists public.usage_logs (
   meta jsonb not null default '{}'::jsonb
 );
 
+create table if not exists public.user_data_snapshots (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists usage_logs_user_kind_used_at_idx
   on public.usage_logs (user_id, kind, used_at desc);
 
 alter table public.profiles enable row level security;
 alter table public.usage_logs enable row level security;
+alter table public.user_data_snapshots enable row level security;
 
 drop policy if exists "profiles read own" on public.profiles;
 create policy "profiles read own"
@@ -44,6 +51,17 @@ drop policy if exists "usage read own" on public.usage_logs;
 create policy "usage read own"
 on public.usage_logs for select
 using (auth.uid() = user_id);
+
+drop policy if exists "snapshots read own" on public.user_data_snapshots;
+create policy "snapshots read own"
+on public.user_data_snapshots for select
+using (auth.uid() = user_id);
+
+drop policy if exists "snapshots upsert own" on public.user_data_snapshots;
+create policy "snapshots upsert own"
+on public.user_data_snapshots for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
 create or replace function public.handle_new_user()
 returns trigger

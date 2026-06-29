@@ -112,3 +112,14 @@ where email = '당신의이메일@example.com';
 - 관리자가 앱의 `나의 기록 → 관리자 패널`에서 승인해야 서버 AI를 사용할 수 있습니다.
 - 기본 자료 AI 등록은 월 1회, 하루 일반 분석은 2회, 이미지는 요청당 최대 5장으로 제한됩니다.
 - API 키는 Vercel 환경변수에만 저장하고 브라우저·GitHub·응답·로그에 노출하지 않습니다.
+
+## 클라우드 백업 정책
+
+로그인 승인된 사용자는 Supabase `user_data_snapshots` 테이블에 기록을 백업할 수 있습니다.
+
+- 저장: 기본 건강정보, 일기 텍스트, 수치 기록, 분석 결과, 첨부 파일 메타데이터
+- 이미지: 원본은 저장하지 않고 작은 `thumbnailDataUrl`만 저장
+- 제외: OpenAI/Gemini/공공데이터 키, 이미지 원본 content
+- 기본 크기 제한: `MAX_SYNC_BYTES=900000`
+
+이미 `supabase-schema.sql`을 실행한 프로젝트라면, 새로 추가된 `user_data_snapshots` 테이블 구문도 다시 실행하세요. `create table if not exists`라 기존 테이블은 유지됩니다.
