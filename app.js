@@ -2,6 +2,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const STORAGE_KEY = "ongirok-state-v2";
 const LEGACY_KEY = "ongirok-state";
+const RECOVERY_KEY = "ongirok-recovery-v1";
 const defaultPrompt = `당신은 사용자의 건강 기록을 장기적으로 이해하는 신중한 건강관리 코치입니다.
 
 [분석 원칙]
@@ -761,6 +762,41 @@ function hasUserContent(source = state) {
   ));
   return hasProfile || hasDay;
 }
+function contentScore(source = state) {
+  const profile = source.profile || {};
+  let score = 0;
+  profileIds.forEach(id => {
+    const value = String(profile[id] || "").trim();
+    if (value) score += Math.min(20, Math.ceil(value.length / 80));
+  });
+  score += Math.min(30, (profile.additionalRecords || []).length * 3);
+  Object.values(source.days || {}).forEach(day => {
+    if (!day) return;
+    if (day.entryTitle) score += 2;
+    if (day.entryText) score += Math.min(20, Math.ceil(String(day.entryText).length / 120));
+    if (day.dailyPledge) score += 2;
+    if (day.stepsInput) score += 1;
+    if (day.sleepInput) score += 1;
+    if (day.waterInput) score += 1;
+    if (day.analysis) score += 8;
+    if (day.extractedImageData) score += 5;
+    score += Math.min(10, (day.attachments || []).length * 2);
+  });
+  return score;
+}
+function recoverySnapshots() {
+  try { return JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveRecoverySnapshot(reason = "복원 전 자동 저장") {
+  if (!hasUserContent()) return;
+  const snapshot = portableStateSnapshot();
+  const score = contentScore(snapshot);
+  if (!score) return;
+  const list = recoverySnapshots();
+  list.unshift({savedAt:new Date().toISOString(), reason, score, snapshot});
+  localStorage.setItem(RECOVERY_KEY, JSON.stringify(list.slice(0, 5)));
+}
 function persist() {
   state.currentDate = currentDate.toISOString();
   if (!applyingCloudSnapshot) state.updatedAt = new Date().toISOString();
@@ -1141,8 +1177,21 @@ async function loadCloudSnapshot({manual = false} = {}) {
     const cloudData = snapshot.data;
     const cloudTime = new Date(snapshot.updated_at || cloudData.updatedAt || 0).getTime();
     const localTime = new Date(state.updatedAt || 0).getTime();
-    const shouldRestore = manual || !hasUserContent() || cloudTime > localTime + 2000;
+    const localScore = contentScore(state);
+    const cloudScore = contentScore(cloudData);
+    if (localScore > 0 && cloudScore === 0) {
+      renderCloudStatus("클라우드 기록이 비어 있어 이 기기의 기존 자료를 덮어쓰지 않았습니다. 기존 자료를 보존하려면 클라우드 백업을 눌러 주세요.");
+      if (manual) toast("빈 클라우드 기록은 불러오지 않았어요");
+      return;
+    }
+    if (manual && localScore > cloudScore + 2) {
+      renderCloudStatus("이 기기의 기록이 클라우드보다 더 많아 덮어쓰지 않았습니다. 필요하면 백업 파일을 내려받은 뒤 클라우드 백업을 눌러 주세요.");
+      toast("로컬 기록 보호를 위해 불러오기를 중단했어요");
+      return;
+    }
+    const shouldRestore = !hasUserContent() || (cloudTime > localTime + 2000 && cloudScore >= localScore);
     if (shouldRestore) {
+      saveRecoverySnapshot("클라우드 불러오기 전 자동 저장");
       applyingCloudSnapshot = true;
       applySnapshotData(cloudData);
       profileIds.forEach(id => $(`#${id}`).value = state.profile[id] || "");
@@ -1163,6 +1212,28 @@ async function loadCloudSnapshot({manual = false} = {}) {
     applyingCloudSnapshot = false;
     if (manual) toast(error.message || "클라우드 불러오기 실패");
     renderCloudStatus(`클라우드 불러오기 실패: ${error.message}`, "error");
+  }
+}
+function restoreLatestRecovery() {
+  const latest = recoverySnapshots()[0];
+  if (!latest?.snapshot) {
+    toast("저장된 로컬 복구 지점이 없습니다");
+    renderCloudStatus("저장된 로컬 복구 지점이 없습니다.", "error");
+    return;
+  }
+  try {
+    applySnapshotData(latest.snapshot);
+    profileIds.forEach(id => $(`#${id}`).value = state.profile[id] || "");
+    renderExtraRecords();
+    renderCover();
+    renderDate();
+    loadDay();
+    setPage(0);
+    toast("로컬 복구 지점을 되돌렸어요");
+    renderCloudStatus(`로컬 복구 완료 · ${new Date(latest.savedAt).toLocaleString()} · ${latest.reason || ""}`);
+  } catch (error) {
+    toast("로컬 복구에 실패했어요");
+    renderCloudStatus(`로컬 복구 실패: ${error.message}`, "error");
   }
 }
 function renderAccount() {
@@ -1791,6 +1862,7 @@ if ($("#sendMagicLink")) $("#sendMagicLink").onclick = sendMagicLink;
 if ($("#refreshAccount")) $("#refreshAccount").onclick = refreshAccount;
 if ($("#saveCloudSnapshot")) $("#saveCloudSnapshot").onclick = () => uploadCloudSnapshot({silent:false});
 if ($("#loadCloudSnapshot")) $("#loadCloudSnapshot").onclick = () => loadCloudSnapshot({manual:true});
+if ($("#restoreLocalRecovery")) $("#restoreLocalRecovery").onclick = restoreLatestRecovery;
 if ($("#signOut")) $("#signOut").onclick = signOutAccount;
 if ($("#openAdmin")) $("#openAdmin").onclick = () => { $("#recordsDialog").close(); $("#adminDialog").showModal(); loadAdminUsers(); };
 if ($("#refreshAdminUsers")) $("#refreshAdminUsers").onclick = loadAdminUsers;
