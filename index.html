@@ -186,8 +186,13 @@
     <div id="authState" class="account-summary">로그인 상태를 확인하고 있어요.</div>
     <div class="auth-form">
       <label class="field">이메일<input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
+      <label class="field">비밀번호<input id="authPassword" type="password" autocomplete="current-password" placeholder="PWA에서는 비밀번호 로그인을 권장합니다"></label>
       <label class="field">이름/별명<input id="authName" autocomplete="name" placeholder="온기록에서 보일 이름"></label>
       <label class="field">사용 목적<textarea id="authPurpose" placeholder="예: 개인 건강관리, 가족 건강 기록, 베타테스트"></textarea></label>
+      <div class="backup-actions auth-actions">
+        <button type="button" class="primary" id="signInPassword">비밀번호로 로그인</button>
+        <button type="button" class="secondary" id="signUpPassword">회원가입</button>
+      </div>
       <button type="button" class="primary" id="sendMagicLink">매직링크 보내기</button>
       <button type="button" class="secondary" id="refreshAccount">승인 상태 새로고침</button>
       <div class="backup-actions">
@@ -197,7 +202,8 @@
       <button type="button" class="secondary" id="restoreLocalRecovery">로컬 복구 지점 되돌리기</button>
       <div id="cloudSyncStatus" class="backup-status">로그인 후 클라우드 백업을 사용할 수 있습니다.</div>
       <button type="button" class="secondary" id="signOut" hidden>로그아웃</button>
-      <p class="setting-help">매직링크로 로그인한 뒤 관리자가 승인하면 서버 AI 분석을 사용할 수 있습니다. 승인 전에도 일기 작성·백업은 가능합니다.</p>
+      <p class="setting-help">설치형 PWA에서는 매직링크가 기본 브라우저로 열릴 수 있어요. PWA 안에서 계속 쓰려면 비밀번호 로그인을 권장합니다.</p>
+      <p class="setting-help">로그인한 뒤 관리자가 승인하면 서버 AI 분석을 사용할 수 있습니다. 승인 전에도 일기 작성·백업은 가능합니다.</p>
     </div>
   </div>
 </dialog>
@@ -367,6 +373,6 @@
 
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260629-29"></script>
+<script src="app.js?v=20260630-30"></script>
 </body>
 </html>

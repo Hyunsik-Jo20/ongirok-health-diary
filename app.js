@@ -1301,6 +1301,77 @@ async function initAuth() {
   await refreshAccount();
   await loadCloudSnapshot();
 }
+function getAuthFormValues() {
+  return {
+    email: ($("#authEmail")?.value || "").trim(),
+    password: ($("#authPassword")?.value || "").trim(),
+    displayName: ($("#authName")?.value || "").trim(),
+    purpose: ($("#authPurpose")?.value || "").trim()
+  };
+}
+async function signInWithPassword() {
+  const button = $("#signInPassword");
+  try {
+    if (!appConfig.authEnabled || !supabaseClient) return toast("Supabase 로그인이 아직 설정되지 않았어요");
+    const {email, password} = getAuthFormValues();
+    if (!email) return toast("이메일을 입력해 주세요");
+    if (!password) return toast("비밀번호를 입력해 주세요");
+    if (button) { button.disabled = true; button.textContent = "로그인 중…"; }
+    const {data, error} = await supabaseClient.auth.signInWithPassword({email, password});
+    if (error) throw error;
+    authSession = data.session;
+    await refreshAccount();
+    await loadCloudSnapshot();
+    loadWeather();
+    toast("PWA 안에서 로그인했어요");
+  } catch (error) {
+    toast(error.message || "로그인에 실패했어요");
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary error";
+      authState.textContent = `비밀번호 로그인 실패: ${error.message || "알 수 없는 오류"}`;
+    }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "비밀번호로 로그인"; }
+  }
+}
+async function signUpWithPassword() {
+  const button = $("#signUpPassword");
+  try {
+    if (!appConfig.authEnabled || !supabaseClient) return toast("Supabase 로그인이 아직 설정되지 않았어요");
+    const {email, password, displayName, purpose} = getAuthFormValues();
+    if (!email) return toast("이메일을 입력해 주세요");
+    if (!password || password.length < 6) return toast("비밀번호는 6자 이상으로 입력해 주세요");
+    if (button) { button.disabled = true; button.textContent = "가입 중…"; }
+    const {data, error} = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options:{data:{display_name:displayName, purpose}}
+    });
+    if (error) throw error;
+    const authState = $("#authState");
+    if (data.session) {
+      authSession = data.session;
+      await refreshAccount();
+      await loadCloudSnapshot();
+      loadWeather();
+      toast("회원가입 후 로그인했어요");
+    } else if (authState) {
+      authState.className = "account-summary pending";
+      authState.textContent = "회원가입 요청을 보냈어요. Supabase 이메일 확인이 켜져 있으면 확인 메일을 눌러야 합니다. PWA에서 바로 쓰려면 Supabase Email provider의 Confirm email을 꺼 주세요.";
+      toast("회원가입 요청을 보냈어요");
+    }
+  } catch (error) {
+    toast(error.message || "회원가입에 실패했어요");
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary error";
+      authState.textContent = `회원가입 실패: ${error.message || "알 수 없는 오류"}`;
+    }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "회원가입"; }
+  }
+}
 async function sendMagicLink() {
   const button = $("#sendMagicLink");
   try {
@@ -1858,6 +1929,8 @@ if ($("#openManualFromRecords")) $("#openManualFromRecords").onclick = openManua
 if ($("#coverAuthBtn")) $("#coverAuthBtn").onclick = openAuthDialog;
 if ($("#openAuthFromSettings")) $("#openAuthFromSettings").onclick = openAuthDialog;
 if ($("#openAuth")) $("#openAuth").onclick = openAuthDialog;
+if ($("#signInPassword")) $("#signInPassword").onclick = signInWithPassword;
+if ($("#signUpPassword")) $("#signUpPassword").onclick = signUpWithPassword;
 if ($("#sendMagicLink")) $("#sendMagicLink").onclick = sendMagicLink;
 if ($("#refreshAccount")) $("#refreshAccount").onclick = refreshAccount;
 if ($("#saveCloudSnapshot")) $("#saveCloudSnapshot").onclick = () => uploadCloudSnapshot({silent:false});
