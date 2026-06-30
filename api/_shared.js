@@ -157,6 +157,20 @@ async function requireApprovedUser(req, res, options = {}) {
   return {user, profile};
 }
 
+async function requireSignedInUser(req, res) {
+  if (!supabaseConfigured()) {
+    if (!authorize(req, res)) return null;
+    return {bypass:true, user:{id:"local"}, profile:{role:"admin", status:"approved"}};
+  }
+  const user = await getAuthUser(req);
+  if (!user) {
+    json(res, 401, {error:"로그인이 필요합니다. 이메일과 비밀번호로 로그인해 주세요."});
+    return null;
+  }
+  const profile = await getProfile(user);
+  return {user, profile};
+}
+
 async function enforceQuota(req, res, body) {
   const gate = await requireApprovedUser(req, res);
   if (!gate || gate.bypass) return gate;
@@ -190,5 +204,5 @@ async function enforceQuota(req, res, body) {
 module.exports = {
   json, authorize, extractOutputText, parseModelJson, requestBody,
   supabaseConfigured, supabaseFetch, getAuthUser, getProfile,
-  requireApprovedUser, enforceQuota, logUsage, usageCount, startOfKstDay, startOfKstMonth
+  requireApprovedUser, requireSignedInUser, enforceQuota, logUsage, usageCount, startOfKstDay, startOfKstMonth
 };

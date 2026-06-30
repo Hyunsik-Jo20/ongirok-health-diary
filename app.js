@@ -1131,8 +1131,7 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 function canCloudSync() {
-  const profile = accountInfo?.profile;
-  return Boolean(authSession && (profile?.status === "approved" || profile?.role === "admin"));
+  return Boolean(authSession);
 }
 function renderCloudStatus(message, kind = "") {
   const el = $("#cloudSyncStatus");
@@ -1180,6 +1179,11 @@ async function loadCloudSnapshot({manual = false} = {}) {
     const localScore = contentScore(state);
     const cloudScore = contentScore(cloudData);
     if (localScore > 0 && cloudScore === 0) {
+      if (!manual) {
+        await uploadCloudSnapshot({silent:true});
+        renderCloudStatus("이 기기의 기존 자료를 클라우드에 자동 백업했습니다.");
+        return;
+      }
       renderCloudStatus("클라우드 기록이 비어 있어 이 기기의 기존 자료를 덮어쓰지 않았습니다. 기존 자료를 보존하려면 클라우드 백업을 눌러 주세요.");
       if (manual) toast("빈 클라우드 기록은 불러오지 않았어요");
       return;
@@ -1203,6 +1207,9 @@ async function loadCloudSnapshot({manual = false} = {}) {
       applyingCloudSnapshot = false;
       toast("클라우드 기록을 불러왔어요");
       renderCloudStatus(`클라우드 기록 불러오기 완료 · ${new Date(cloudTime).toLocaleString()}`);
+    } else if (!manual && localScore > cloudScore + 2) {
+      await uploadCloudSnapshot({silent:true});
+      renderCloudStatus(`이 기기의 기존 자료가 클라우드보다 많아 자동 백업했습니다 · 로컬 ${localScore} / 클라우드 ${cloudScore}`);
     } else if (localTime > cloudTime + 2000) {
       await uploadCloudSnapshot({silent:true});
     } else {

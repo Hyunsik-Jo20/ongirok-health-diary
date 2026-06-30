@@ -1,8 +1,8 @@
-const {json, requireApprovedUser, supabaseFetch} = require("./_shared");
+const {json, requireSignedInUser, supabaseFetch} = require("./_shared");
 
 module.exports = async function handler(req, res) {
   if (!["GET", "POST"].includes(req.method)) return json(res, 405, {error:"지원하지 않는 요청입니다."});
-  const gate = await requireApprovedUser(req, res);
+  const gate = await requireSignedInUser(req, res);
   if (!gate) return;
   const userId = gate.user.id;
 
