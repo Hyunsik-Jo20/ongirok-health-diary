@@ -193,6 +193,12 @@
         <button type="button" class="primary" id="signInPassword">비밀번호로 로그인</button>
         <button type="button" class="secondary" id="signUpPassword">회원가입</button>
       </div>
+      <button type="button" class="secondary" id="requestPasswordReset">비밀번호 재설정 메일 받기</button>
+      <div id="passwordRecoveryBox" class="backup-status" hidden>
+        <label class="field">새 비밀번호<input id="newAuthPassword" type="password" autocomplete="new-password" placeholder="새 비밀번호 6자 이상"></label>
+        <button type="button" class="primary" id="updatePassword">새 비밀번호 저장</button>
+        <p class="setting-help">재설정 메일 링크로 들어온 경우 이곳에서 새 비밀번호를 저장할 수 있습니다. 저장 후 설치된 PWA에서 비밀번호로 로그인하세요.</p>
+      </div>
       <button type="button" class="primary" id="sendMagicLink">매직링크 보내기</button>
       <button type="button" class="secondary" id="refreshAccount">승인 상태 새로고침</button>
       <div class="backup-actions">
@@ -373,6 +379,6 @@
 
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260630-30"></script>
+<script src="app.js?v=20260630-31"></script>
 </body>
 </html>

@@ -1292,8 +1292,11 @@ async function initAuth() {
   const {data} = await supabaseClient.auth.getSession();
   authSession = data.session;
   if (authSession?.user?.email && $("#authEmail")) $("#authEmail").value = authSession.user.email;
-  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
     authSession = session;
+    if (event === "PASSWORD_RECOVERY") {
+      showPasswordRecoveryMode();
+    }
     await refreshAccount();
     await loadCloudSnapshot();
     loadWeather();
@@ -1308,6 +1311,17 @@ function getAuthFormValues() {
     displayName: ($("#authName")?.value || "").trim(),
     purpose: ($("#authPurpose")?.value || "").trim()
   };
+}
+function showPasswordRecoveryMode() {
+  const box = $("#passwordRecoveryBox");
+  const authState = $("#authState");
+  if (box) box.hidden = false;
+  if (authState) {
+    authState.className = "account-summary pending";
+    authState.textContent = "비밀번호 재설정 모드입니다. 새 비밀번호를 입력하고 저장해 주세요.";
+  }
+  openAuthDialog();
+  setTimeout(() => $("#newAuthPassword")?.focus(), 80);
 }
 async function signInWithPassword() {
   const button = $("#signInPassword");
@@ -1370,6 +1384,64 @@ async function signUpWithPassword() {
     }
   } finally {
     if (button) { button.disabled = false; button.textContent = "회원가입"; }
+  }
+}
+async function requestPasswordReset() {
+  const button = $("#requestPasswordReset");
+  try {
+    if (!appConfig.authEnabled || !supabaseClient) return toast("Supabase 로그인이 아직 설정되지 않았어요");
+    const {email} = getAuthFormValues();
+    if (!email) return toast("이메일을 입력해 주세요");
+    if (button) { button.disabled = true; button.textContent = "재설정 메일 보내는 중…"; }
+    const {error} = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    });
+    if (error) throw error;
+    toast("비밀번호 재설정 메일을 보냈어요");
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary pending";
+      authState.textContent = `${email}로 재설정 메일을 보냈어요. 링크를 열어 새 비밀번호를 저장한 뒤 PWA에서 다시 로그인하세요.`;
+    }
+  } catch (error) {
+    toast(error.message || "비밀번호 재설정 메일 전송에 실패했어요");
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary error";
+      authState.textContent = `재설정 메일 전송 실패: ${error.message || "알 수 없는 오류"}`;
+    }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "비밀번호 재설정 메일 받기"; }
+  }
+}
+async function updatePassword() {
+  const button = $("#updatePassword");
+  try {
+    if (!appConfig.authEnabled || !supabaseClient) return toast("Supabase 로그인이 아직 설정되지 않았어요");
+    const password = ($("#newAuthPassword")?.value || "").trim();
+    if (!password || password.length < 6) return toast("새 비밀번호는 6자 이상으로 입력해 주세요");
+    if (button) { button.disabled = true; button.textContent = "저장 중…"; }
+    const {error} = await supabaseClient.auth.updateUser({password});
+    if (error) throw error;
+    const box = $("#passwordRecoveryBox");
+    if (box) box.hidden = true;
+    const passwordInput = $("#authPassword");
+    if (passwordInput) passwordInput.value = "";
+    toast("새 비밀번호를 저장했어요");
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary approved";
+      authState.textContent = "새 비밀번호를 저장했어요. 설치된 PWA에서 이메일과 새 비밀번호로 로그인할 수 있습니다.";
+    }
+  } catch (error) {
+    toast(error.message || "새 비밀번호 저장에 실패했어요");
+    const authState = $("#authState");
+    if (authState) {
+      authState.className = "account-summary error";
+      authState.textContent = `새 비밀번호 저장 실패: ${error.message || "알 수 없는 오류"}`;
+    }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "새 비밀번호 저장"; }
   }
 }
 async function sendMagicLink() {
@@ -1931,6 +2003,8 @@ if ($("#openAuthFromSettings")) $("#openAuthFromSettings").onclick = openAuthDia
 if ($("#openAuth")) $("#openAuth").onclick = openAuthDialog;
 if ($("#signInPassword")) $("#signInPassword").onclick = signInWithPassword;
 if ($("#signUpPassword")) $("#signUpPassword").onclick = signUpWithPassword;
+if ($("#requestPasswordReset")) $("#requestPasswordReset").onclick = requestPasswordReset;
+if ($("#updatePassword")) $("#updatePassword").onclick = updatePassword;
 if ($("#sendMagicLink")) $("#sendMagicLink").onclick = sendMagicLink;
 if ($("#refreshAccount")) $("#refreshAccount").onclick = refreshAccount;
 if ($("#saveCloudSnapshot")) $("#saveCloudSnapshot").onclick = () => uploadCloudSnapshot({silent:false});
