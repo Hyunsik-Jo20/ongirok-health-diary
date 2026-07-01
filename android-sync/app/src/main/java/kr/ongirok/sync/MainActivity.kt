@@ -197,12 +197,15 @@ fun SyncApp() {
 private suspend fun signIn(email: String, password: String): String = withContext(Dispatchers.IO) {
     val supabaseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
     val anonKey = BuildConfig.SUPABASE_ANON_KEY
-    require(supabaseUrl.isNotBlank() && anonKey.isNotBlank()) { "SUPABASE_URL / SUPABASE_ANON_KEY를 local.properties에 입력하세요." }
+    require(supabaseUrl.startsWith("https://") && anonKey.length > 20) {
+        "local.properties에 SUPABASE_URL과 SUPABASE_ANON_KEY(anon public)를 입력하세요."
+    }
 
     val connection = (URL("$supabaseUrl/auth/v1/token?grant_type=password").openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
         setRequestProperty("Content-Type", "application/json")
         setRequestProperty("apikey", anonKey)
+        setRequestProperty("Authorization", "Bearer $anonKey")
         doOutput = true
     }
     val payload = buildJsonObject {
@@ -210,9 +213,20 @@ private suspend fun signIn(email: String, password: String): String = withContex
         put("password", password)
     }.toString()
     OutputStreamWriter(connection.outputStream).use { it.write(payload) }
-    val text = connection.inputStream.bufferedReader().readText()
+    val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
+    val text = stream?.bufferedReader()?.readText().orEmpty()
+    if (connection.responseCode !in 200..299) {
+        val message = runCatching {
+            val json = Json.parseToJsonElement(text).jsonObject
+            json["msg"]?.jsonPrimitive?.content
+                ?: json["message"]?.jsonPrimitive?.content
+                ?: json["error_description"]?.jsonPrimitive?.content
+                ?: json["error"]?.jsonPrimitive?.content
+        }.getOrNull()
+        error(message ?: "Supabase 로그인 실패 ${connection.responseCode}: $text")
+    }
     Json.parseToJsonElement(text).jsonObject["access_token"]?.jsonPrimitive?.content
-        ?: error("access_token이 없습니다.")
+        ?: error("Supabase 응답에 access_token이 없습니다.")
 }
 
 private suspend fun syncDate(client: HealthConnectClient, token: String, date: LocalDate) {
