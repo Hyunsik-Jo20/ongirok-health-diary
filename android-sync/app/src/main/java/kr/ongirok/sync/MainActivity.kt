@@ -176,6 +176,20 @@ fun SyncApp() {
                         }
                     }
                 ) { Text("로그인") }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            if (email.isBlank()) {
+                                status = "비밀번호 재설정 메일을 받을 이메일을 입력하세요."
+                                return@launch
+                            }
+                            status = "비밀번호 재설정 메일 전송 중..."
+                            runCatching { sendPasswordReset(email.trim()) }
+                                .onSuccess { status = "비밀번호 재설정 메일을 보냈습니다. 메일에서 새 비밀번호를 설정한 뒤 다시 로그인하세요." }
+                                .onFailure { status = "재설정 메일 전송 실패: ${it.message}" }
+                        }
+                    }
+                ) { Text("비밀번호 재설정 메일 받기") }
             }
         }
 
@@ -251,6 +265,37 @@ private suspend fun signIn(email: String, password: String): String = withContex
     }
     return@withContext Json.parseToJsonElement(text).jsonObject["access_token"]?.jsonPrimitive?.content
         ?: error("Supabase 응답에 access_token이 없습니다.")
+}
+
+private suspend fun sendPasswordReset(email: String) = withContext(Dispatchers.IO) {
+    val supabaseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
+    val anonKey = BuildConfig.SUPABASE_ANON_KEY
+    require(supabaseUrl.startsWith("https://") && anonKey.length > 20) {
+        "local.properties에 SUPABASE_URL과 SUPABASE_ANON_KEY(anon public)를 입력하세요."
+    }
+    val connection = (URL("$supabaseUrl/auth/v1/recover").openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        setRequestProperty("Content-Type", "application/json")
+        setRequestProperty("apikey", anonKey)
+        setRequestProperty("Authorization", "Bearer $anonKey")
+        doOutput = true
+    }
+    val payload = buildJsonObject {
+        put("email", email)
+    }.toString()
+    OutputStreamWriter(connection.outputStream).use { it.write(payload) }
+    val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
+    val text = stream?.bufferedReader()?.readText().orEmpty()
+    if (connection.responseCode !in 200..299) {
+        val message = runCatching {
+            val json = Json.parseToJsonElement(text).jsonObject
+            json["msg"]?.jsonPrimitive?.content
+                ?: json["message"]?.jsonPrimitive?.content
+                ?: json["error_description"]?.jsonPrimitive?.content
+                ?: json["error"]?.jsonPrimitive?.content
+        }.getOrNull()
+        error(message ?: "Supabase 재설정 메일 전송 실패 ${connection.responseCode}: $text")
+    }
 }
 
 private suspend fun syncDate(client: HealthConnectClient, token: String, date: LocalDate) {
