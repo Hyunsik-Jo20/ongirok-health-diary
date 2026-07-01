@@ -67,7 +67,7 @@ const defaultDailyImagePrompt = `당신은 건강 앱 스크린샷과 일일 건
 1. 제공된 모든 이미지를 실제로 확인하고 OCR 및 시각 정보를 함께 사용합니다.
 2. 같은 날짜·같은 운동의 중복 화면은 하나의 기록으로 합칩니다.
 3. 화면에 보이는 값만 기록하고 보이지 않는 값은 추정하지 않습니다.
-4. 걸음, 활동시간, 활동 칼로리, 총소모 칼로리, 이동거리, 운동 종류, 운동시간, 거리, 페이스, 속도, 심박수, 케이던스, VO2max, 수면, 혈중산소, 심박수, 호흡수, 대사지표, 음식 정보를 가능한 한 구조화합니다.
+4. 걸음, 활동시간, 활동 칼로리, 총소모 칼로리, 이동거리, 운동 종류, 운동시간, 거리, 페이스, 속도, 심박수, 케이던스, VO2max, 수면, 혈중산소, 심박수, 호흡수, 대사지표, 음식 정보를 가능한 한 구조화합니다. 단, 수분 섭취량과 체중은 사용자가 온기록에 직접 입력해 관리하는 값이므로 건강 앱 이미지에서 보이는 경우에만 참고 기록으로 남깁니다.
 5. 이미지별로 읽은 핵심 근거를 남깁니다.
 6. 운동 강도와 회복 평가는 사용자의 건강 프로필을 함께 고려하되, 데이터 추출값과 해석을 구분합니다.
 
@@ -80,7 +80,7 @@ const defaultDailyImagePrompt = `당신은 건강 앱 스크린샷과 일일 건
   "dailyMetrics": {
     "steps": null, "activeMinutes": null, "activeCaloriesKcal": null,
     "totalCaloriesKcal": null, "distanceKm": null,
-    "sleepHours": null, "sleepScore": null, "waterLiters": null
+    "sleepHours": null, "sleepScore": null
   },
   "workouts": [{
     "type":"", "duration":"", "distanceKm":null, "caloriesKcal":null,
@@ -689,10 +689,6 @@ function applyImageMetrics(extracted) {
     $("#sleepInput").value = metrics.sleepHours;
     getDay().sleepInput = String(metrics.sleepHours);
   }
-  if (metrics.waterLiters != null) {
-    $("#waterInput").value = metrics.waterLiters;
-    getDay().waterInput = String(metrics.waterLiters);
-  }
 }
 function imageExtractionAsText(extracted) {
   if (!extracted) return "";
@@ -973,8 +969,7 @@ function deviceMetricItems(metrics = {}) {
     ["최대 심박", compactValue(m.heartRateMaxBpm, "bpm"), "강도"],
     ["수면", compactValue(m.sleepHours, "h"), "회복"],
     ["수면 점수", compactValue(m.sleepScore, "점"), "질"],
-    ["혈중산소", compactValue(m.bloodOxygenAvgPercent, "%"), "수면"],
-    ["체중", compactValue(m.weightKg, "kg"), "신체"]
+    ["혈중산소", compactValue(m.bloodOxygenAvgPercent, "%"), "수면"]
   ].filter(item => item[1]);
 }
 function renderDeviceMetrics() {
@@ -1888,7 +1883,7 @@ function filterAlreadyProvidedMissingData(items = [], payload = buildPayload()) 
   const deviceItems = deviceMetricItems(device).map(([label]) => label).join(" ");
   return (Array.isArray(items) ? items : []).filter(item => {
     const text = String(item || "");
-    if ((record.waterLiters || /수분/.test(deviceItems)) && /수분|물\s*섭취|음수/.test(text)) return false;
+    if (record.waterLiters && /수분|물\s*섭취|음수/.test(text)) return false;
     if ((record.steps || /걸음/.test(deviceItems)) && /걸음|보행|활동량/.test(text)) return false;
     if ((record.sleepHours || /수면/.test(deviceItems)) && /수면\s*(시간|량|점수)|총\s*수면|취침.*기상/.test(text)) return false;
     if (/심박/.test(deviceItems) && /심박|심박수|bpm/.test(text)) return false;
