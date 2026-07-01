@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,9 +7,9 @@ plugins {
 }
 
 fun localProperty(name: String, fallback: String = ""): String {
-    val props = java.util.Properties()
+    val props = Properties()
     val file = rootProject.file("local.properties")
-    if (file.exists()) file.inputStream().use(props::load)
+    if (file.exists()) file.inputStream().use { input -> props.load(input) }
     return props.getProperty(name) ?: fallback
 }
 
