@@ -171,7 +171,7 @@
     <span class="eyebrow">MY HEALTH RECORDS</span><h2>나의 기록</h2>
     <div id="accountSummary" class="account-summary"></div>
     <div class="records-tools">
-      <button type="button" class="secondary" id="openManualFromRecords">사용법·백업 안내</button>
+      <button type="button" class="secondary" id="openManualFromRecords">사용법 안내</button>
       <button type="button" class="secondary" id="openAuth">로그인·승인 상태</button>
       <button type="button" class="secondary admin-only" id="openAdmin" hidden>관리자 패널</button>
     </div>
@@ -199,17 +199,9 @@
         <button type="button" class="primary" id="updatePassword">새 비밀번호 저장</button>
         <p class="setting-help">재설정 메일 링크로 들어온 경우 이곳에서 새 비밀번호를 저장할 수 있습니다. 저장 후 설치된 PWA에서 비밀번호로 로그인하세요.</p>
       </div>
-      <button type="button" class="primary" id="sendMagicLink">매직링크 보내기</button>
-      <button type="button" class="secondary" id="refreshAccount">승인 상태 새로고침</button>
-      <div class="backup-actions">
-        <button type="button" class="secondary" id="saveCloudSnapshot">클라우드 백업</button>
-        <button type="button" class="secondary" id="loadCloudSnapshot">클라우드 불러오기</button>
-      </div>
-      <button type="button" class="secondary" id="restoreLocalRecovery">로컬 복구 지점 되돌리기</button>
-      <div id="cloudSyncStatus" class="backup-status">로그인 후 클라우드 백업을 사용할 수 있습니다.</div>
+      <div id="cloudSyncStatus" class="backup-status">로그인 후 기록이 온라인에 자동 저장됩니다.</div>
       <button type="button" class="secondary" id="signOut" hidden>로그아웃</button>
-      <p class="setting-help">설치형 PWA에서는 매직링크가 기본 브라우저로 열릴 수 있어요. PWA 안에서 계속 쓰려면 비밀번호 로그인을 권장합니다.</p>
-      <p class="setting-help">로그인한 뒤 관리자가 승인하면 서버 AI 분석을 사용할 수 있습니다. 승인 전에도 일기 작성·백업은 가능합니다.</p>
+      <p class="setting-help">로그인하면 기록은 자동으로 클라우드에 저장됩니다. 관리자가 승인하면 서버 AI 분석까지 사용할 수 있습니다.</p>
     </div>
   </div>
 </dialog>
@@ -262,18 +254,14 @@
     </section>
 
     <section class="manual-card backup-card">
-      <h3>4. 데이터 백업·복원</h3>
-      <p>스마트폰을 바꾸거나 다른 브라우저에서 쓰려면 먼저 백업 파일을 저장하고, 새 기기에서 다시 업로드하세요.</p>
-      <div class="backup-actions">
-        <button type="button" class="primary" id="exportBackup">백업 파일 내려받기</button>
-        <label class="secondary file-restore-label"><input type="file" id="importBackup" accept=".json,application/json" hidden>백업 파일 업로드</label>
-      </div>
+      <h3>4. 데이터 저장·기기 변경</h3>
+      <p>로그인하면 기록은 자동으로 클라우드에 저장됩니다. 스마트폰을 바꾸거나 다른 기기에서 사용할 때는 같은 이메일로 로그인하면 됩니다.</p>
       <ul class="manual-list">
-        <li>백업 포함: 기본 건강정보, 일기 텍스트, 수치 기록, 분석 결과, 프롬프트/지역 설정</li>
-        <li>백업 제외: OpenAI·Gemini·공공데이터 API 키, 원본 사진 파일</li>
-        <li>복원 후에는 설정창에서 API 키만 다시 입력하면 됩니다.</li>
+        <li>자동 저장: 기본 건강정보, 일기 텍스트, 수치 기록, 분석 결과, 썸네일 기록</li>
+        <li>보안 제외: OpenAI·Gemini·공공데이터 API 키와 원본 사진 파일</li>
+        <li>새 기기에서는 로그인 후 필요한 API 키만 다시 입력하세요.</li>
       </ul>
-      <div id="backupStatus" class="backup-status">아직 백업 작업이 없습니다.</div>
+      <div id="backupStatus" class="backup-status">로그인 후 기록은 자동으로 저장됩니다.</div>
     </section>
   </div>
 </dialog>
@@ -370,7 +358,7 @@
     </details>
     <div class="prompt-actions"><button type="button" class="primary" id="saveSettings">키 저장</button></div>
     <div class="setting-tools">
-      <button type="button" class="secondary" id="openManualFromSettings">사용법·백업 안내 열기</button>
+      <button type="button" class="secondary" id="openManualFromSettings">사용법 안내 열기</button>
       <button type="button" class="secondary" id="openAuthFromSettings">로그인·승인 상태 열기</button>
     </div>
     <p class="setting-help">입력한 키는 이 스마트폰의 브라우저 저장소에만 보관되며 서버에는 저장되지 않습니다. 공용·공공장소 기기에서는 사용하지 마세요. 브라우저 데이터를 삭제하면 키도 함께 삭제됩니다.</p>
@@ -379,6 +367,6 @@
 
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260630-32"></script>
+<script src="app.js?v=20260701-33"></script>
 </body>
 </html>

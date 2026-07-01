@@ -1153,11 +1153,11 @@ async function uploadCloudSnapshot({silent = false} = {}) {
       method:"POST",
       body:JSON.stringify({data:snapshot, updatedAt:snapshot.updatedAt})
     });
-    if (!silent) toast("클라우드에 백업했어요");
-    renderCloudStatus(`클라우드 백업 완료 · ${new Date(snapshot.updatedAt).toLocaleString()}`);
+    if (!silent) toast("온라인에 저장했어요");
+    renderCloudStatus(`온라인 저장 완료 · ${new Date(snapshot.updatedAt).toLocaleString()}`);
   } catch (error) {
-    if (!silent) toast(error.message || "클라우드 백업 실패");
-    renderCloudStatus(`클라우드 백업 실패: ${error.message}`, "error");
+    if (!silent) toast(error.message || "온라인 저장 실패");
+    renderCloudStatus(`온라인 저장 실패: ${error.message}`, "error");
   } finally {
     cloudSyncBusy = false;
   }
@@ -1181,15 +1181,15 @@ async function loadCloudSnapshot({manual = false} = {}) {
     if (localScore > 0 && cloudScore === 0) {
       if (!manual) {
         await uploadCloudSnapshot({silent:true});
-        renderCloudStatus("이 기기의 기존 자료를 클라우드에 자동 백업했습니다.");
+        renderCloudStatus("이 기기의 기존 자료를 온라인에 자동 저장했습니다.");
         return;
       }
-      renderCloudStatus("클라우드 기록이 비어 있어 이 기기의 기존 자료를 덮어쓰지 않았습니다. 기존 자료를 보존하려면 클라우드 백업을 눌러 주세요.");
+      renderCloudStatus("온라인 기록이 비어 있어 이 기기의 기존 자료를 덮어쓰지 않았습니다.");
       if (manual) toast("빈 클라우드 기록은 불러오지 않았어요");
       return;
     }
     if (manual && localScore > cloudScore + 2) {
-      renderCloudStatus("이 기기의 기록이 클라우드보다 더 많아 덮어쓰지 않았습니다. 필요하면 백업 파일을 내려받은 뒤 클라우드 백업을 눌러 주세요.");
+      renderCloudStatus("이 기기의 기록이 온라인 기록보다 더 많아 덮어쓰지 않았습니다.");
       toast("로컬 기록 보호를 위해 불러오기를 중단했어요");
       return;
     }
@@ -1209,7 +1209,7 @@ async function loadCloudSnapshot({manual = false} = {}) {
       renderCloudStatus(`클라우드 기록 불러오기 완료 · ${new Date(cloudTime).toLocaleString()}`);
     } else if (!manual && localScore > cloudScore + 2) {
       await uploadCloudSnapshot({silent:true});
-      renderCloudStatus(`이 기기의 기존 자료가 클라우드보다 많아 자동 백업했습니다 · 로컬 ${localScore} / 클라우드 ${cloudScore}`);
+      renderCloudStatus(`이 기기의 기존 자료가 온라인 기록보다 많아 자동 저장했습니다 · 기기 ${localScore} / 온라인 ${cloudScore}`);
     } else if (localTime > cloudTime + 2000) {
       await uploadCloudSnapshot({silent:true});
     } else {
@@ -1251,12 +1251,12 @@ function renderAccount() {
   const text = !appConfig.authEnabled
     ? "서버 로그인 설정 전입니다. Supabase 환경변수를 연결하면 승인제가 활성화됩니다."
     : !authSession
-      ? "로그인 전입니다. 서버 AI 분석을 쓰려면 이메일 매직링크로 로그인해 주세요."
+      ? "로그인 전입니다. 이메일과 비밀번호로 로그인하면 기록이 온라인에 자동 저장됩니다."
       : profile?.status === "approved" || profile?.role === "admin"
         ? `${profile.role === "admin" ? "관리자" : "승인 사용자"} · ${accountInfo.user.email} · 오늘 분석 ${usage?.todayAiUsed ?? 0}/${usage?.dailyLimit ?? 2}회 · 기본자료 이번 달 ${usage?.monthProfileUsed ?? 0}/${usage?.profileMonthlyLimit ?? 1}회`
         : profile?.status === "blocked"
           ? `${accountInfo.user.email} · 차단된 계정입니다. 서버 AI 기능을 사용할 수 없습니다.`
-          : `${accountInfo?.user?.email || "로그인됨"} · 승인 대기 중입니다. 승인 전에는 일기 작성과 백업만 사용할 수 있어요.`;
+          : `${accountInfo?.user?.email || "로그인됨"} · 승인 대기 중입니다. 승인 전에도 일기 작성과 온라인 저장은 사용할 수 있어요.`;
   boxes.forEach(box => {
     box.className = `account-summary ${className}`;
     box.textContent = text;
@@ -2024,8 +2024,8 @@ if ($("#adminUsers")) $("#adminUsers").addEventListener("click", event => {
   const button = event.target.closest("[data-admin-action]");
   if (button) updateAdminUser(button.dataset.userId, button.dataset.adminAction).catch(error => toast(error.message));
 });
-$("#exportBackup").onclick = downloadBackup;
-$("#importBackup").onchange = importBackupFile;
+if ($("#exportBackup")) $("#exportBackup").onclick = downloadBackup;
+if ($("#importBackup")) $("#importBackup").onchange = importBackupFile;
 $("#missingDataList").addEventListener("click", event => {
   const button = event.target.closest("[data-missing-kind]");
   if (button) openMissingDataInput(button.dataset.missingKind);
