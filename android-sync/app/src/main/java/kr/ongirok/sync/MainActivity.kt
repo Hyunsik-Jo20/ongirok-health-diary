@@ -6,10 +6,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -99,17 +97,33 @@ fun SyncApp() {
     var status by remember { mutableStateOf("온기록 계정으로 로그인한 뒤 Health Connect 권한을 허용하세요.") }
     var healthClient by remember { mutableStateOf<HealthConnectClient?>(null) }
     var permissionsGranted by remember { mutableStateOf(false) }
+    val configStatus = remember {
+        val hasUrl = BuildConfig.SUPABASE_URL.startsWith("https://")
+        val hasKey = BuildConfig.SUPABASE_ANON_KEY.length > 20
+        when {
+            hasUrl && hasKey -> "Supabase 설정 확인됨"
+            !hasUrl && !hasKey -> "Supabase URL과 anon key가 없습니다."
+            !hasUrl -> "Supabase URL이 없습니다."
+            else -> "Supabase anon key가 없습니다."
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         PermissionController.createRequestPermissionResultContract()
     ) { granted ->
         permissionsGranted = granted.containsAll(permissions)
-        status = if (permissionsGranted) "Health Connect 권한이 허용되었습니다." else "일부 권한이 허용되지 않았습니다."
+        status = if (permissionsGranted) {
+            "Health Connect 권한이 허용되었습니다."
+        } else {
+            "일부 권한이 허용되지 않았습니다."
+        }
     }
 
     LaunchedEffect(Unit) {
         healthClient = runCatching { HealthConnectClient.getOrCreate(context) }.getOrNull()
-        if (healthClient == null) status = "Health Connect를 사용할 수 없습니다. 기기에 Health Connect를 설치하거나 업데이트하세요."
+        if (healthClient == null) {
+            status = "Health Connect를 사용할 수 없습니다. 기기에 Health Connect를 설치하거나 업데이트하세요."
+        }
     }
 
     Column(
@@ -121,6 +135,14 @@ fun SyncApp() {
     ) {
         Text("온기록 Sync", style = MaterialTheme.typography.headlineMedium)
         Text("Health Connect의 걸음·운동·심박·수면 데이터를 온기록에 보냅니다.")
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("상태", style = MaterialTheme.typography.titleMedium)
+                Text(status)
+                Text(configStatus, style = MaterialTheme.typography.bodySmall)
+            }
+        }
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -140,16 +162,19 @@ fun SyncApp() {
                 Button(
                     onClick = {
                         scope.launch {
+                            if (email.isBlank() || password.isBlank()) {
+                                status = "이메일과 비밀번호를 모두 입력하세요."
+                                return@launch
+                            }
                             status = "로그인 중..."
-                            runCatching { signIn(email, password) }
+                            runCatching { signIn(email.trim(), password) }
                                 .onSuccess {
                                     accessToken = it
                                     status = "로그인 완료. Health Connect 권한을 허용하세요."
                                 }
                                 .onFailure { status = "로그인 실패: ${it.message}" }
                         }
-                    },
-                    enabled = email.isNotBlank() && password.isNotBlank()
+                    }
                 ) { Text("로그인") }
             }
         }
@@ -178,7 +203,9 @@ fun SyncApp() {
                     val client = healthClient ?: return@launch
                     status = "최근 7일 동기화 중..."
                     runCatching {
-                        (0..6).forEach { offset -> syncDate(client, accessToken, LocalDate.now().minusDays(offset.toLong())) }
+                        (0..6).forEach { offset ->
+                            syncDate(client, accessToken, LocalDate.now().minusDays(offset.toLong()))
+                        }
                     }.onSuccess {
                         status = "최근 7일 동기화 완료"
                     }.onFailure {
@@ -188,9 +215,6 @@ fun SyncApp() {
             },
             enabled = accessToken.isNotBlank() && permissionsGranted
         ) { Text("최근 7일 동기화") }
-
-        Spacer(Modifier.height(8.dp))
-        Text(status)
     }
 }
 
@@ -225,7 +249,7 @@ private suspend fun signIn(email: String, password: String): String = withContex
         }.getOrNull()
         error(message ?: "Supabase 로그인 실패 ${connection.responseCode}: $text")
     }
-    Json.parseToJsonElement(text).jsonObject["access_token"]?.jsonPrimitive?.content
+    return@withContext Json.parseToJsonElement(text).jsonObject["access_token"]?.jsonPrimitive?.content
         ?: error("Supabase 응답에 access_token이 없습니다.")
 }
 
