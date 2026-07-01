@@ -70,10 +70,19 @@
         <label class="add-photo"><input type="file" id="dailyFiles" accept=".md,.markdown,.txt,.pdf,.csv,.json,text/plain,text/markdown,text/csv,application/pdf,application/json" multiple hidden><span>📎</span> 파일 가져오기</label>
       </div>
       <div class="attachment-status" id="attachmentStatus">첨부된 자료가 없습니다.</div>
+      <section class="device-metrics-card">
+        <header>
+          <div><span class="eyebrow">CONNECTED HEALTH DATA</span><strong>스마트 기기 자동 수집</strong></div>
+          <small id="deviceSyncStatus">연동 대기</small>
+        </header>
+        <div class="device-metric-grid" id="deviceMetricGrid">
+          <div class="device-empty">Health Connect 연동 앱이 연결되면 걸음·수면·심박·운동 데이터가 여기에 자동 표시됩니다.</div>
+        </div>
+      </section>
       <div class="metric-inputs">
-        <label>걸음<input id="stepsInput" inputmode="numeric" placeholder="8420"></label>
-        <label>수면(h)<input id="sleepInput" inputmode="decimal" placeholder="7.3"></label>
-        <label>물(L)<input id="waterInput" inputmode="decimal" placeholder="1.6"></label>
+        <label>직접 보정 걸음<input id="stepsInput" inputmode="numeric" placeholder="8420"></label>
+        <label>직접 보정 수면(h)<input id="sleepInput" inputmode="decimal" placeholder="7.3"></label>
+        <label>직접 보정 물(L)<input id="waterInput" inputmode="decimal" placeholder="1.6"></label>
       </div>
       <label class="pledge-note"><span>✍ 오늘의 다짐</span><textarea id="dailyPledge" placeholder="내 몸을 위해 오늘 꼭 지키고 싶은 한 가지"></textarea></label>
     </section>
@@ -247,6 +256,7 @@
       <ol>
         <li>표지에서 기본 건강정보를 입력하거나 병원 기록·검진 기록 파일을 가져옵니다.</li>
         <li>1쪽에는 제목, 자유 일기, 걸음·수면·수분, 운동/식사 사진 또는 파일을 기록합니다.</li>
+        <li>Health Connect 연동 앱을 사용하면 스마트워치·헬스앱의 걸음, 수면, 심박, 운동 데이터가 1쪽에 자동 표시됩니다.</li>
         <li>2쪽에서 분석하기를 누르면 AI가 글·수치·첨부 이미지·날씨를 함께 읽고 건강 리포트를 만듭니다.</li>
         <li>“보완하면 더 정확해져요”에 나온 항목은 버튼을 눌러 해당 입력 위치로 바로 추가할 수 있습니다.</li>
         <li>하단 캘린더·인사이트·나의 기록에서 날짜별 기록과 추세를 확인합니다.</li>
@@ -367,6 +377,6 @@
 
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260701-33"></script>
+<script src="app.js?v=20260701-34"></script>
 </body>
 </html>

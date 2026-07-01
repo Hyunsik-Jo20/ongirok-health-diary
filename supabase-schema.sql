@@ -29,12 +29,24 @@ create table if not exists public.user_data_snapshots (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.device_daily_metrics (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  record_date date not null,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, record_date)
+);
+
 create index if not exists usage_logs_user_kind_used_at_idx
   on public.usage_logs (user_id, kind, used_at desc);
+
+create index if not exists device_daily_metrics_user_date_idx
+  on public.device_daily_metrics (user_id, record_date desc);
 
 alter table public.profiles enable row level security;
 alter table public.usage_logs enable row level security;
 alter table public.user_data_snapshots enable row level security;
+alter table public.device_daily_metrics enable row level security;
 
 drop policy if exists "profiles read own" on public.profiles;
 create policy "profiles read own"
@@ -60,6 +72,17 @@ using (auth.uid() = user_id);
 drop policy if exists "snapshots upsert own" on public.user_data_snapshots;
 create policy "snapshots upsert own"
 on public.user_data_snapshots for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "device metrics read own" on public.device_daily_metrics;
+create policy "device metrics read own"
+on public.device_daily_metrics for select
+using (auth.uid() = user_id);
+
+drop policy if exists "device metrics upsert own" on public.device_daily_metrics;
+create policy "device metrics upsert own"
+on public.device_daily_metrics for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 

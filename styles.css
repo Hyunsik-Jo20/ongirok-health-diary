@@ -129,6 +129,16 @@ h1 { font-family: "Nanum Pen Script"; font-size: 31px; font-weight: 400; margin:
 .attachment-status { margin-top: 7px; padding: 6px 8px; border-radius: 7px; background: rgba(237,232,215,.65); color: #858173; font-size: 9px; text-align: center; }
 .attachment-status.ready { background: #e5eadf; color: var(--sage-dark); }
 .attachment-status.pending { background: #f2e4d7; color: #8b624f; }
+.device-metrics-card { margin-top: 10px; padding: 11px; border-radius: 12px; background: rgba(245,239,224,.78); border: 1px solid rgba(126,139,112,.18); box-shadow: inset 0 0 18px rgba(126,110,76,.05); }
+.device-metrics-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.device-metrics-card strong { display: block; font-family: "Gaegu"; font-size: 17px; color: var(--ink); }
+.device-metrics-card small { color: var(--muted); font-size: 9px; text-align: right; }
+.device-metric-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.device-metric { padding: 8px 6px; border-radius: 9px; background: rgba(255,255,255,.62); text-align: center; border: 1px solid rgba(203,196,178,.55); }
+.device-metric span { display: block; color: var(--muted); font-size: 8.5px; line-height: 1.2; }
+.device-metric strong { font-size: 16px; line-height: 1.1; color: var(--sage-dark); }
+.device-metric em { display: block; font-style: normal; color: #9b8977; font-size: 8px; }
+.device-empty { grid-column: 1 / -1; padding: 10px; border-radius: 9px; background: rgba(255,255,255,.45); color: #807a6f; font-size: 9.5px; line-height: 1.55; text-align: center; }
 .tiny-stats { display: flex; justify-content: space-around; margin-top: 14px; text-align: center; }
 .tiny-stats div { display: grid; }.tiny-stats span { font-size: 9px; color: var(--muted); }.tiny-stats strong { font-family: "Gaegu"; font-size: 17px; }
 .metric-inputs { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-top: 12px; }
