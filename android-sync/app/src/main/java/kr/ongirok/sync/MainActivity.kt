@@ -179,6 +179,31 @@ fun SyncApp() {
                 Button(
                     onClick = {
                         scope.launch {
+                            if (email.isBlank() || password.isBlank()) {
+                                status = "회원가입할 이메일과 비밀번호를 모두 입력하세요."
+                                return@launch
+                            }
+                            if (password.length < 6) {
+                                status = "비밀번호는 최소 6자 이상으로 입력하세요."
+                                return@launch
+                            }
+                            status = "회원가입 중..."
+                            runCatching { signUp(email.trim(), password) }
+                                .onSuccess { token ->
+                                    if (token.isNullOrBlank()) {
+                                        status = "회원가입 요청 완료. 이메일 확인을 요구하는 설정이면 메일 확인 후 로그인하세요."
+                                    } else {
+                                        accessToken = token
+                                        status = "회원가입 및 로그인 완료. Health Connect 권한을 허용하세요."
+                                    }
+                                }
+                                .onFailure { status = "회원가입 실패: ${it.message}" }
+                        }
+                    }
+                ) { Text("회원가입") }
+                Button(
+                    onClick = {
+                        scope.launch {
                             if (email.isBlank()) {
                                 status = "비밀번호 재설정 메일을 받을 이메일을 입력하세요."
                                 return@launch
@@ -230,6 +255,46 @@ fun SyncApp() {
             enabled = accessToken.isNotBlank() && permissionsGranted
         ) { Text("최근 7일 동기화") }
     }
+}
+
+private suspend fun signUp(email: String, password: String): String? = withContext(Dispatchers.IO) {
+    val supabaseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
+    val anonKey = BuildConfig.SUPABASE_ANON_KEY
+    require(supabaseUrl.startsWith("https://") && anonKey.length > 20) {
+        "local.properties에 SUPABASE_URL과 SUPABASE_ANON_KEY(anon public)를 입력하세요."
+    }
+
+    val connection = (URL("$supabaseUrl/auth/v1/signup").openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        setRequestProperty("Content-Type", "application/json")
+        setRequestProperty("apikey", anonKey)
+        setRequestProperty("Authorization", "Bearer $anonKey")
+        doOutput = true
+    }
+    val payload = buildJsonObject {
+        put("email", email)
+        put("password", password)
+        put("data", buildJsonObject {
+            put("display_name", "온기록 Sync 사용자")
+            put("purpose", "Health Connect 동기화")
+        })
+    }.toString()
+    OutputStreamWriter(connection.outputStream).use { it.write(payload) }
+    val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
+    val text = stream?.bufferedReader()?.readText().orEmpty()
+    if (connection.responseCode !in 200..299) {
+        val message = runCatching {
+            val json = Json.parseToJsonElement(text).jsonObject
+            json["msg"]?.jsonPrimitive?.content
+                ?: json["message"]?.jsonPrimitive?.content
+                ?: json["error_description"]?.jsonPrimitive?.content
+                ?: json["error"]?.jsonPrimitive?.content
+        }.getOrNull()
+        error(message ?: "Supabase 회원가입 실패 ${connection.responseCode}: $text")
+    }
+    return@withContext runCatching {
+        Json.parseToJsonElement(text).jsonObject["access_token"]?.jsonPrimitive?.content
+    }.getOrNull()
 }
 
 private suspend fun signIn(email: String, password: String): String = withContext(Dispatchers.IO) {
